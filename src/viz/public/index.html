@@ -1,0 +1,1372 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KnowSync</title>
+  <script src="/vendor/graphology.umd.min.js"></script>
+  <script src="/vendor/sigma.min.js"></script>
+  <script src="/vendor/marked.umd.js"></script>
+  <script src="/vendor/mermaid.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --surface2: #1c2128;
+      --border: #30363d;
+      --text: #e6edf3;
+      --text2: #7d8590;
+      --accent: #58a6ff;
+      --accent2: #1f6feb;
+      --green: #3fb950;
+      --red: #f85149;
+      --yellow: #d29922;
+      --purple: #bc8cff;
+    }
+
+    body {
+      display: grid;
+      grid-template-columns: 210px 1fr;
+      height: 100vh;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 14px;
+    }
+
+    /* ── Sidebar ──────────────────────────────────────────────────────── */
+    aside {
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      padding: 16px 10px;
+      gap: 4px;
+      overflow-y: auto;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 8px 16px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 8px;
+    }
+    .logo-icon { color: var(--accent); font-size: 18px; }
+    .logo-text { font-weight: 700; font-size: 15px; color: var(--text); }
+    .logo-ver { font-size: 11px; color: var(--text2); margin-left: auto; }
+
+    .project-select-wrap {
+      padding: 0 2px 10px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 8px;
+    }
+    .project-select-label { font-size: 11px; color: var(--text2); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .project-select-row { display: flex; gap: 4px; align-items: center; }
+    .project-select {
+      flex: 1;
+      min-width: 0;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 13px;
+      padding: 7px 10px;
+      outline: none;
+      cursor: pointer;
+    }
+    .project-select:focus { border-color: var(--accent); }
+    .project-select option { background: var(--surface2); }
+    .btn-icon {
+      width: 28px; height: 28px; flex-shrink: 0;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 6px; color: var(--text2); font-size: 15px;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      line-height: 1; transition: border-color 0.15s, color 0.15s;
+    }
+    .btn-icon:hover { border-color: var(--accent); color: var(--text); }
+    .btn-icon.active { border-color: var(--accent); color: var(--accent); }
+    .inline-form { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+    .path-field-row { display: flex; align-items: center; gap: 4px; }
+    .path-field-label { font-size: 10px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.05em; min-width: 28px; flex-shrink: 0; }
+    .btn-icon-sm { width: 24px !important; height: 24px !important; font-size: 11px !important; flex-shrink: 0; }
+    .input-inline {
+      width: 100%; padding: 7px 10px;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 6px; color: var(--text); font-size: 12px;
+      font-family: 'SF Mono', Menlo, monospace; outline: none;
+    }
+    .input-inline:focus { border-color: var(--accent); }
+    .inline-form-actions { display: flex; gap: 6px; }
+    .inline-form-actions .btn-primary { flex: 1; padding: 6px 10px; font-size: 12px; }
+    .inline-form-actions .btn-secondary { padding: 6px 10px; font-size: 12px; }
+.config-row { margin-bottom: 8px; }
+    .config-key { font-size: 10px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 2px; }
+    .config-val { font-size: 11px; color: var(--text); font-family: 'SF Mono', Menlo, monospace; word-break: break-all; line-height: 1.4; }
+    .btn-danger {
+      width: 100%; margin-top: 4px; padding: 6px;
+      background: transparent; border: 1px solid var(--red);
+      border-radius: 6px; color: var(--red); font-size: 12px;
+      cursor: pointer; transition: background 0.15s;
+    }
+    /* ── Doc source tags ────────────────────────────────────────────── */
+    .doc-source-list { display: flex; flex-direction: column; gap: 3px; margin-bottom: 4px; }
+    .doc-source-tag {
+      display: flex; align-items: center; gap: 4px;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 4px; padding: 3px 6px; font-size: 11px; font-family: monospace;
+    }
+    .doc-source-path { flex: 1; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .doc-source-label { color: var(--text2); font-size: 10px; }
+    .doc-source-rm { background: none; border: none; color: var(--text2); cursor: pointer; padding: 0 2px; font-size: 13px; line-height: 1; }
+    .doc-source-rm:hover { color: var(--red); }
+    .doc-source-add { display: flex; gap: 4px; margin-top: 3px; }
+    .doc-source-add .input-inline { font-size: 11px; padding: 3px 6px; }
+    /* ── Link suggestions ───────────────────────────────────────────── */
+    .suggest-btn { margin-left:4px; padding:1px 6px; font-size:10px; background:var(--surface2); border:1px solid var(--border); border-radius:4px; color:var(--accent); cursor:pointer; }
+    .suggest-btn:hover { border-color:var(--accent); }
+    .suggestion-list { margin-top:6px; display:flex; flex-direction:column; gap:3px; }
+    .suggestion-item {
+      display:flex; align-items:center; gap:6px; font-size:11px;
+      background:var(--surface2); border:1px solid var(--border); border-radius:5px; padding:5px 8px;
+    }
+    .suggestion-doc { flex:1; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .suggestion-file { color:var(--text2); font-size:10px; flex-shrink:0; }
+    .link-btn { padding:2px 8px; font-size:10px; background:var(--accent2); border:none; border-radius:4px; color:#fff; cursor:pointer; flex-shrink:0; }
+    .link-btn:disabled { opacity:0.5; cursor:default; }
+    .link-btn.done { background:var(--green); }
+    .unlink-btn { padding:2px 8px; font-size:10px; background:transparent; border:1px solid var(--red); border-radius:4px; color:var(--red); cursor:pointer; flex-shrink:0; }
+    .unlink-btn:hover { background:var(--red); color:#fff; }
+    .mark-badge { display:inline-flex;align-items:center;gap:3px;font-size:9px;padding:1px 5px;border-radius:8px;background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.4);color:#f59e0b;flex-shrink:0; }
+    .marks-counter { display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#f59e0b;cursor:pointer; }
+    .marks-counter-dot { width:7px;height:7px;border-radius:50%;background:#f59e0b; }
+    .marks-list { margin-top:10px; }
+    .mark-row { display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);margin-bottom:4px;font-size:11px; }
+    .mark-action-link { color:var(--green);font-weight:600;min-width:40px; }
+    .mark-action-unlink { color:var(--red);font-weight:600;min-width:40px; }
+    .mark-doc { flex:1;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+    .mark-sym { color:var(--accent);font-family:monospace;flex-shrink:0; }
+    .mark-file { color:var(--text2);font-size:10px;flex-shrink:0; }
+    /* ── Validate links section ─────────────────────────────────────── */
+    .vlinks-summary { font-size:12px; margin:8px 0 10px; color:var(--text2); }
+    .vlinks-stale-item { font-size:11px; padding:5px 8px; background:var(--surface2); border:1px solid #f8514922; border-radius:5px; margin-bottom:4px; }
+    .vlinks-stale-sym { color:var(--red); font-family:monospace; }
+    .btn-danger:hover { background: #2d1414; }
+    /* ── Links Manager ──────────────────────────────────────────────── */
+    .links-table { width:100%; border-collapse:collapse; font-size:11px; }
+    .links-table th { text-align:left; padding:5px 8px; color:var(--text2); font-weight:500; border-bottom:1px solid var(--border); }
+    .links-table td { padding:5px 8px; border-bottom:1px solid var(--border2,#1c1f26); vertical-align:middle; }
+    .links-table tr:last-child td { border-bottom:none; }
+    .links-table tr:hover td { background:var(--surface2); }
+    .link-edge-type { font-size:9px; padding:1px 5px; border-radius:8px; background:rgba(99,102,241,.15); color:#818cf8; font-family:monospace; }
+    .link-manual-badge { font-size:9px; padding:1px 5px; border-radius:8px; background:rgba(16,185,129,.12); color:#10b981; }
+    .layer-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:12px 0 16px; }
+    .layer-col { border:1px solid var(--border); border-radius:8px; background:var(--surface); padding:10px 12px; min-height:84px; }
+    .layer-col-title { font-size:11px; color:var(--text2); text-transform:uppercase; letter-spacing:.06em; margin-bottom:8px; }
+    .layer-doc { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; padding:7px 0; border-top:1px solid rgba(255,255,255,.04); }
+    .layer-doc:first-child { border-top:none; padding-top:0; }
+    .layer-doc-main { min-width:0; flex:1; }
+    .layer-doc-heading { color:var(--text); font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .layer-doc-file { color:var(--text2); font-size:10px; font-family:monospace; margin-top:2px; }
+    .layer-actions { display:flex; gap:5px; flex-wrap:wrap; justify-content:flex-end; flex-shrink:0; }
+    .layer-chip { flex-shrink:0; font-size:9px; padding:2px 6px; border-radius:999px; border:1px solid var(--border); color:var(--text2); background:var(--surface2); }
+    .layer-meta { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; color:var(--text2); font-size:10px; font-family:monospace; }
+    .links-filter-row { display:flex; gap:6px; align-items:center; margin:6px 0 12px; flex-wrap:wrap; }
+    .links-filter-btn { padding:4px 10px; border:1px solid var(--border); border-radius:999px; background:transparent; color:var(--text2); font-size:11px; cursor:pointer; }
+    .links-filter-btn:hover { border-color:var(--accent); color:var(--text); }
+    .links-filter-btn.active { background:#1f3552; border-color:#1f3552; color:var(--accent); }
+    /* ── Forward refs ───────────────────────────────────────────────── */
+    .fref-item { display:flex; align-items:center; gap:8px; padding:6px 10px; border:1px solid var(--border); border-radius:7px; background:var(--surface2); margin-bottom:6px; font-size:11px; }
+    .fref-sym { font-family:monospace; font-size:12px; color:var(--accent); flex-shrink:0; }
+    .fref-doc { flex:1; overflow:hidden; }
+    .fref-doc-heading { color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .fref-doc-file { color:var(--text2); font-size:10px; }
+    .fref-status-pending { font-size:9px; padding:1px 6px; border-radius:8px; background:rgba(245,158,11,.15); color:#f59e0b; border:1px solid rgba(245,158,11,.3); flex-shrink:0; }
+    .fref-status-ready { font-size:9px; padding:1px 6px; border-radius:8px; background:rgba(16,185,129,.12); color:#10b981; border:1px solid rgba(16,185,129,.25); flex-shrink:0; }
+    .promote-btn { padding:2px 8px; font-size:10px; background:var(--green); border:none; border-radius:4px; color:#fff; cursor:pointer; flex-shrink:0; }
+    .promote-btn:disabled { opacity:0.5; cursor:default; }
+
+
+    .nav-btn {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      width: 100%;
+      padding: 9px 10px;
+      border: none;
+      background: transparent;
+      color: var(--text2);
+      font-size: 13px;
+      cursor: pointer;
+      border-radius: 6px;
+      text-align: left;
+      transition: background 0.1s, color 0.1s;
+    }
+    .nav-btn:hover { background: var(--surface2); color: var(--text); }
+    .nav-btn.active { background: #1f3552; color: var(--accent); font-weight: 500; }
+    .nav-icon { font-size: 15px; width: 18px; text-align: center; flex-shrink: 0; }
+
+
+    /* ── Main area ────────────────────────────────────────────────────── */
+    #main { position: relative; overflow: hidden; height: 100vh; }
+
+    .tab { display: none; width: 100%; height: 100%; }
+    .tab.active { display: flex; flex-direction: column; }
+
+    /* Graph tab: sigma fills it */
+    #tab-graph { overflow: hidden; }
+    #sigma-wrap { flex: 1; position: relative; overflow: hidden; }
+    #sigma-container { position: absolute; inset: 0; }
+    #graph-toolbar {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 14px; background: var(--surface);
+      border-bottom: 1px solid var(--border); flex-shrink: 0;
+    }
+    .btn-index {
+      display: flex; align-items: center; justify-content: center; gap: 5px;
+      padding: 6px 12px; background: transparent; border: 1px solid var(--border);
+      border-radius: 6px; color: var(--text2); font-size: 12px; cursor: pointer;
+      transition: border-color 0.15s, color 0.15s; white-space: nowrap;
+    }
+    .btn-index:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+    .btn-index:disabled { opacity: 0.5; cursor: default; }
+    .delta-label {
+      display: flex; align-items: center; gap: 4px;
+      font-size: 11px; color: var(--text2); cursor: pointer; white-space: nowrap;
+    }
+    .delta-label input { cursor: pointer; accent-color: var(--accent); }
+    .toolbar-stats { display: flex; gap: 16px; margin-left: auto; }
+    .tstat { display: flex; gap: 5px; align-items: center; font-size: 12px; }
+    .tsl { color: var(--text2); }
+    .tsv { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+    /* Other tabs: scrollable */
+    .tab:not(#tab-graph):not(#tab-docs):not(#tab-vdocs).active { overflow-y: auto; }
+    .tab-inner { padding: 28px 32px; max-width: 900px; width: 100%; }
+    /* ── Docs sub-tab layout ──────────────────────────────────────────── */
+    #tab-docs { overflow: hidden; }
+    #tab-docs.active { display:flex; flex-direction:column; }
+    .docs-subnav { display:flex; align-items:center; gap:4px; padding:0 20px; height:44px; border-bottom:1px solid var(--border); background:var(--surface); flex-shrink:0; overflow-x:auto; }
+    .docs-subtab { padding:6px 14px; border:none; border-radius:6px; background:transparent; color:var(--text2); font-size:12px; cursor:pointer; white-space:nowrap; transition:background .12s,color .12s; }
+    .docs-subtab:hover { background:var(--surface2); color:var(--text); }
+    .docs-subtab.active { background:#1f3552; color:var(--accent); font-weight:500; }
+    .docs-panels { flex:1; overflow:hidden; position:relative; }
+    .docs-panel { display:none; position:absolute; inset:0; overflow-y:auto; }
+    .docs-panel.active { display:block; }
+
+    /* ── Tab header ───────────────────────────────────────────────────── */
+    .tab-title { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
+    .tab-desc { font-size: 13px; color: var(--text2); margin-bottom: 20px; }
+    .tab-title-row { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+
+    /* ── Forms ────────────────────────────────────────────────────────── */
+    .form-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .input-lg {
+      flex: 1;
+      min-width: 200px;
+      padding: 8px 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .input-lg:focus { border-color: var(--accent); }
+    .input-sm {
+      width: 60px;
+      padding: 7px 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 13px;
+      outline: none;
+      text-align: center;
+    }
+    .label-inline { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text2); white-space: nowrap; }
+
+    .btn-primary {
+      padding: 8px 16px;
+      background: var(--accent2);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s;
+    }
+    .btn-primary:hover { background: #388bfd; }
+    .btn-secondary {
+      padding: 7px 14px;
+      background: transparent;
+      color: var(--text2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .btn-secondary:hover { border-color: var(--accent); color: var(--text); }
+    .btn-sm {
+      padding: 4px 10px;
+      border: none;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .btn-blue { background: #1f3552; color: var(--accent); }
+    .btn-blue:hover { background: #1f3f66; }
+    .btn-purple { background: #2a1f52; color: var(--purple); }
+    .btn-purple:hover { background: #342563; }
+
+    /* ── Cards ────────────────────────────────────────────────────────── */
+    .section-title {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text2);
+      margin: 20px 0 10px;
+    }
+
+    .symbol-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin-bottom: 6px;
+    }
+    .symbol-header { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .symbol-name { font-weight: 600; font-size: 14px; }
+    .symbol-file { font-size: 12px; color: var(--text2); margin-top: 4px; font-family: 'SF Mono', Menlo, monospace; }
+    .symbol-sig { font-size: 12px; color: var(--text2); margin-top: 6px; font-family: 'SF Mono', Menlo, monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .symbol-doc { font-size: 12px; color: var(--text2); margin-top: 6px; line-height: 1.5; }
+    .call-count { margin-left: auto; font-size: 12px; color: var(--text2); background: var(--surface2); padding: 2px 8px; border-radius: 10px; }
+    .line-num { font-size: 12px; color: var(--text2); }
+
+    .doc-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin-bottom: 6px;
+      border-left: 3px solid var(--green);
+    }
+    .doc-heading { font-weight: 600; font-size: 13px; margin-bottom: 4px; }
+    .doc-file { font-size: 11px; color: var(--text2); font-family: monospace; margin-bottom: 6px; }
+    .doc-content { font-size: 12px; color: var(--text2); line-height: 1.5; }
+    .doc-meta-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+    .doc-meta-pill {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 2px 8px; border: 1px solid var(--border); border-radius: 9999px;
+      font-size: 10px; color: var(--text2); background: var(--surface2);
+      max-width: 100%;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 9999px;
+      font-size: 11px;
+      font-weight: 500;
+      flex-shrink: 0;
+    }
+
+    /* ── States ───────────────────────────────────────────────────────── */
+    .loading-state {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--text2);
+      padding: 32px 0;
+      font-size: 13px;
+    }
+    .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .empty-state {
+      padding: 40px 0;
+      text-align: center;
+      color: var(--text2);
+      font-size: 13px;
+    }
+    .error-state {
+      padding: 16px;
+      background: #2d1414;
+      border: 1px solid #6e2222;
+      border-radius: 8px;
+      color: #f85149;
+      font-size: 13px;
+      margin-top: 8px;
+    }
+    .success-box {
+      padding: 16px;
+      background: #0d2a15;
+      border: 1px solid #1a6331;
+      border-radius: 8px;
+      color: var(--green);
+      font-size: 13px;
+      margin-top: 8px;
+    }
+
+    /* ── Impact ───────────────────────────────────────────────────────── */
+    .impact-summary { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+    .impact-badge {
+      padding: 4px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .impact-badge.direct { background: #2d1f14; color: #f0883e; border: 1px solid #5c3412; }
+    .impact-badge.transitive { background: #2d1414; color: var(--red); border: 1px solid #6e2222; }
+    .impact-badge.docs { background: #0d2a15; color: var(--green); border: 1px solid #1a6331; }
+
+    /* ── Flow ─────────────────────────────────────────────────────────── */
+    .flow-entry {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 4px;
+      font-weight: 600;
+    }
+    .flow-steps { margin-top: 4px; }
+    .flow-step {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      margin-bottom: 3px;
+    }
+    .flow-depth { color: var(--text2); font-size: 12px; flex-shrink: 0; }
+    .flow-name { font-weight: 500; }
+    .file-path { font-size: 12px; color: var(--text2); font-family: monospace; margin-left: auto; flex-shrink: 0; }
+
+    /* ── Module ───────────────────────────────────────────────────────── */
+    .module-stats { display: flex; gap: 16px; margin-bottom: 16px; }
+    .module-stat {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 12px 20px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      min-width: 80px;
+    }
+    .stat-val { font-size: 24px; font-weight: 700; color: var(--accent); }
+    .stat-lbl { font-size: 12px; color: var(--text2); }
+
+    .file-group { margin-bottom: 12px; }
+    .file-group-header {
+      font-size: 12px;
+      color: var(--text2);
+      font-family: monospace;
+      padding: 6px 0 6px 2px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .file-count {
+      background: var(--surface2);
+      color: var(--text2);
+      border-radius: 10px;
+      padding: 1px 7px;
+      font-size: 11px;
+    }
+    .file-list { display: flex; flex-direction: column; gap: 3px; }
+    .file-item { font-size: 12px; color: var(--text2); font-family: monospace; padding: 4px 0; }
+
+    /* ── Symbol expand / type filter ─────────────────────────────────── */
+    .symbol-card-wrap { margin-bottom: 6px; }
+    .symbol-expand-btn { display: inline-flex; align-items: center; gap: 4px; margin-top: 8px; padding: 3px 9px; background: transparent; border: 1px solid var(--border); border-radius: 4px; color: var(--text2); font-size: 11px; cursor: pointer; transition: all 0.15s; }
+    .symbol-expand-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .symbol-detail-panel { padding: 10px 12px; background: var(--surface2); border-radius: 0 0 8px 8px; border: 1px solid var(--border); border-top: none; margin-top: -1px; }
+    .type-filter-bar { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 14px; }
+    .type-filter-pill { padding: 3px 10px; border: 1px solid var(--border); border-radius: 10px; font-size: 11px; cursor: pointer; background: transparent; color: var(--text2); transition: all 0.15s; }
+    .type-filter-pill.active { background: #1f3552; border-color: var(--accent); color: var(--accent); }
+
+    /* ── Validate ─────────────────────────────────────────────────────── */
+    .validate-summary {
+      display: inline-block;
+      padding: 6px 14px;
+      background: #2d1f14;
+      color: #f0883e;
+      border: 1px solid #5c3412;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      margin-bottom: 16px;
+    }
+    .validate-item { opacity: 0.9; }
+
+    /* ── Graph overlays ───────────────────────────────────────────────── */
+    #graph-search {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      z-index: 10;
+    }
+    #graph-search input {
+      background: rgba(22, 27, 34, 0.92);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      width: 220px;
+      outline: none;
+      backdrop-filter: blur(4px);
+    }
+    #graph-search input:focus { border-color: var(--accent); }
+
+    #graph-panel {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      width: 296px;
+      max-height: calc(100vh - 100px);
+      overflow-y: auto;
+      background: rgba(22, 27, 34, 0.96);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+      z-index: 10;
+      backdrop-filter: blur(8px);
+      display: none;
+    }
+    #graph-panel.open { display: block; }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 12px;
+      gap: 8px;
+    }
+    .panel-title { font-weight: 700; font-size: 15px; flex: 1; word-break: break-all; }
+    .panel-close {
+      background: none;
+      border: none;
+      color: var(--text2);
+      font-size: 18px;
+      cursor: pointer;
+      line-height: 1;
+      padding: 0;
+    }
+    .panel-close:hover { color: var(--text); }
+    .panel-row { display: flex; gap: 8px; margin-bottom: 5px; align-items: flex-start; }
+    .pl { color: var(--text2); font-size: 12px; min-width: 52px; padding-top: 2px; }
+    .pv { font-size: 12px; word-break: break-all; }
+    .pv-file { font-family: monospace; color: var(--text2); }
+    .panel-sig {
+      margin: 8px 0;
+      padding: 6px 8px;
+      background: var(--surface2);
+      border-radius: 4px;
+      font-size: 11px;
+      font-family: monospace;
+      color: var(--text);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .panel-doc {
+      margin: 6px 0;
+      font-size: 12px;
+      color: var(--text2);
+      line-height: 1.5;
+    }
+    .panel-actions { display: flex; gap: 6px; margin: 10px 0 8px; }
+    .panel-section-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text2);
+      margin: 12px 0 6px;
+    }
+    .mini-card {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 0;
+      font-size: 12px;
+      border-bottom: 1px solid #21262d;
+    }
+    .mini-card:last-child { border-bottom: none; }
+
+    /* ── Graph legend ─────────────────────────────────────────────────── */
+    #graph-legend {
+      position: absolute;
+      bottom: 14px;
+      left: 14px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      z-index: 10;
+    }
+    .legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text2); }
+    .legend-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+
+    /* ── Scrollbar ────────────────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* ── Visual Docs ─────────────────────────────────────────────────────── */
+    #tab-vdocs { overflow: hidden; }
+    #tab-vdocs.active { display:flex; flex-direction:column; }
+    #vdocs-toolbar {
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+      padding: 8px 14px; background: var(--surface);
+      border-bottom: 1px solid var(--border); flex-shrink: 0;
+    }
+    #vdocs-wrap { flex: 1; position: relative; overflow: hidden; }
+    #vdocs-container { position: absolute; inset: 0; }
+    #vdocs-empty { position: absolute; inset: 0; pointer-events: none; }
+    .vdocs-mode-tabs { display:flex; gap:6px; margin-left:8px; }
+    .vdocs-outline-wrap { position:absolute; inset:0; display:grid; grid-template-columns: minmax(320px, 420px) 1fr; }
+    .vdocs-outline-tree { border-right:1px solid var(--border); overflow:auto; padding:12px 14px 28px; background: rgba(13,17,23,0.92); }
+    .vdocs-outline-preview { overflow:auto; padding:18px 20px 28px; }
+    .vdocs-outline-empty { color:var(--text2); font-size:12px; padding:10px 0; }
+    .vdocs-tree-list { list-style:none; margin:0; padding-left:0; }
+    .vdocs-tree-list .vdocs-tree-list { padding-left:18px; margin-top:2px; }
+    .vdocs-tree-item { margin:2px 0; }
+    .vdocs-tree-row { display:flex; align-items:stretch; gap:6px; }
+    .vdocs-tree-toggle { width:26px; min-width:26px; border:1px solid transparent; border-radius:8px; background:transparent; color:var(--text2); cursor:pointer; font-size:11px; }
+    .vdocs-tree-toggle:hover { background:var(--surface); border-color:var(--border); color:var(--text); }
+    .vdocs-tree-toggle.placeholder { visibility:hidden; pointer-events:none; }
+    .vdocs-tree-btn { width:100%; text-align:left; background:transparent; border:1px solid transparent; color:var(--text); border-radius:8px; padding:7px 10px; font-size:12px; cursor:pointer; }
+    .vdocs-tree-btn:hover { background:var(--surface); border-color:var(--border); }
+    .vdocs-tree-btn.active { background:#1f2937; border-color:#334155; color:#f8fafc; }
+    .vdocs-tree-meta { font-size:10px; color:var(--text2); margin-top:2px; }
+    .vdocs-group-header { font-size:12px; font-weight:600; color:var(--text); letter-spacing:.01em; }
+    .vdocs-group-item { margin:0 0 6px; }
+    .vdocs-group-btn { border-radius:8px; padding:8px 10px 7px; }
+    .vdocs-docsource-bar { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; padding-bottom:10px; border-bottom:1px solid var(--border); }
+    .vdocs-docsource-chip { display:inline-flex; align-items:center; gap:5px; padding:3px 9px 3px 6px; border-radius:20px; font-size:11px; font-weight:500; background:var(--surface2); border:1px solid var(--border); color:var(--text); cursor:pointer; }
+    .vdocs-docsource-chip:hover { border-color:var(--accent); }
+    .vdocs-docsource-chip .chip-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+    .vdocs-mode-badge { font-size:10px; color:var(--text2); padding:2px 7px; border:1px solid var(--border); border-radius:10px; background:var(--surface2); }
+    .vdocs-cfg-source-row { display:flex; align-items:center; gap:6px; padding:5px 8px; border:1px solid var(--border); border-radius:6px; background:var(--surface2); margin-bottom:4px; }
+    .vdocs-cfg-source-row .src-color-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+    .vdocs-cfg-source-row .src-path { font-size:12px; font-family:monospace; color:var(--text); flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .vdocs-cfg-source-row .src-label { font-size:10px; padding:1px 6px; border-radius:8px; background:var(--surface); border:1px solid var(--border); color:var(--text2); }
+    .vdocs-cfg-source-row .src-order { font-size:10px; color:var(--text2); min-width:16px; text-align:center; }
+    .vdocs-cfg-source-row .src-exclude { font-size:9px; color:#f59e0b; padding:1px 5px; background:rgba(245,158,11,.1); border-radius:6px; }
+    .vdocs-scan-item { padding:5px 10px; border:1px solid var(--border); border-radius:6px; background:var(--surface2); margin-bottom:3px; display:flex; align-items:center; gap:8px; cursor:pointer; font-size:12px; }
+    .vdocs-scan-item:hover { border-color:var(--accent); }
+    .vdocs-scan-item .scan-path { font-family:monospace; color:var(--accent); flex:1; }
+    .vdocs-scan-item .scan-cnt { font-size:10px; color:var(--text2); }
+    .vdocs-scan-item .scan-files { font-size:10px; color:var(--text2); font-style:italic; }
+    .vdocs-preview-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:14px; }
+    .vdocs-preview-title { font-size:18px; font-weight:600; color:var(--text); margin:0; }
+    .vdocs-preview-breadcrumb { font-size:11px; color:var(--text2); font-family:monospace; }
+    .vdocs-preview-card { border:1px solid var(--border); border-radius:10px; background:var(--surface); padding:14px 16px; }
+    .vdocs-preview-actions { display:flex; gap:8px; margin-top:10px; }
+    .vdocs-links-empty { display:flex; align-items:center; justify-content:center; height:100%; color:var(--text2); font-size:13px; flex-direction:column; gap:8px; }
+    #vdocs-panel {
+      position: absolute; top: 14px; right: 14px; width: 300px;
+      max-height: calc(100vh - 120px); overflow-y: auto;
+      background: rgba(22,27,34,0.96); border: 1px solid var(--border);
+      border-radius: 10px; padding: 14px; z-index: 10;
+      backdrop-filter: blur(8px); display: none;
+    }
+    #vdocs-panel.open { display: block; }
+    .vdocs-content {
+      font-size: 12px; color: var(--text2); line-height: 1.6; margin: 8px 0;
+      word-break: break-word;
+      max-height: 320px; overflow-y: auto;
+      background: var(--surface2); padding: 8px 10px; border-radius: 6px;
+    }
+    .vdocs-content h1,.vdocs-content h2,.vdocs-content h3,.vdocs-content h4 {
+      font-size: 12px; font-weight: 600; color: var(--text); margin: 6px 0 3px;
+    }
+    .vdocs-content p { margin: 3px 0; }
+    .vdocs-content code { background: var(--bg); border-radius: 3px; padding: 1px 4px; font-family: monospace; font-size: 11px; color: var(--accent); }
+    .vdocs-content pre { background: var(--bg); border-radius: 4px; padding: 6px 8px; overflow-x: auto; margin: 4px 0; }
+    .vdocs-content pre code { background: none; padding: 0; }
+    .vdocs-content ul,.vdocs-content ol { padding-left: 16px; margin: 3px 0; }
+    .vdocs-content a { color: var(--accent); text-decoration: none; }
+    .vdocs-content blockquote { border-left: 2px solid var(--border); padding-left: 8px; color: var(--text2); margin: 4px 0; }
+    .vdocs-content table { width:100%; border-collapse:collapse; margin:8px 0; font-size:11px; }
+    .vdocs-content th { background:var(--bg); color:var(--text); font-weight:600; padding:5px 10px; text-align:left; border:1px solid var(--border); }
+    .vdocs-content td { padding:4px 10px; border:1px solid var(--border); color:var(--text2); }
+    .vdocs-content tr:nth-child(even) td { background:rgba(255,255,255,.02); }
+    .vdocs-content .mermaid { background:var(--bg); border-radius:6px; padding:12px; margin:8px 0; text-align:center; overflow-x:auto; }
+    .vdocs-content .mermaid svg { max-width:100%; height:auto; }
+    /* ── Symbol popup ───────────────────────────────────────────────── */
+    .sym-popup-overlay { position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:1000; display:flex; align-items:center; justify-content:center; }
+    .sym-popup { background:var(--surface); border:1px solid var(--border); border-radius:12px; width:min(640px,90vw); max-height:80vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.6); }
+    .sym-popup-header { display:flex; align-items:center; gap:10px; padding:14px 18px; border-bottom:1px solid var(--border); flex-shrink:0; }
+    .sym-popup-title { font-size:15px; font-weight:600; font-family:monospace; color:var(--text); flex:1; }
+    .sym-popup-close { background:transparent; border:none; color:var(--text2); font-size:18px; cursor:pointer; padding:0 4px; line-height:1; }
+    .sym-popup-close:hover { color:var(--text); }
+    .sym-popup-body { overflow-y:auto; padding:14px 18px; flex:1; }
+    .sym-popup-section { margin-bottom:14px; }
+    .sym-popup-section-title { font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.08em; color:var(--text2); margin-bottom:6px; }
+    .sym-popup-sig { font-family:monospace; font-size:11px; color:var(--accent); background:var(--bg); padding:6px 10px; border-radius:5px; white-space:pre-wrap; word-break:break-word; }
+    .sym-popup-caller { display:flex; align-items:center; gap:6px; font-size:11px; padding:3px 0; color:var(--text); }
+    .sym-popup-file { font-size:10px; color:var(--text2); font-family:monospace; }
+    .sym-popup-doc { font-size:11px; padding:4px 0; color:var(--text); border-bottom:1px solid var(--border2,#1c1f26); }
+    .sym-popup-doc:last-child { border-bottom:none; }
+
+    /* ── MCP ──────────────────────────────────────────────────────────── */
+    .mcp-tool-tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+    .mcp-tool-btn { padding: 5px 12px; border: 1px solid var(--border); border-radius: 6px; background: transparent; color: var(--text2); font-size: 12px; cursor: pointer; transition: all 0.15s; }
+    .mcp-tool-btn.active { border-color: var(--accent); color: var(--accent); background: #1f3552; }
+    .mcp-code-block { position: relative; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 14px; font-family: 'SF Mono', Menlo, monospace; font-size: 12px; line-height: 1.6; color: var(--text); white-space: pre; overflow-x: auto; }
+    .mcp-copy-btn { position: absolute; top: 8px; right: 8px; padding: 3px 10px; background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; color: var(--text2); font-size: 11px; cursor: pointer; }
+    .mcp-copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .mcp-path-row { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+    .mcp-path-label { font-size: 11px; color: var(--text2); min-width: 60px; }
+    .mcp-path-val { font-size: 11px; font-family: monospace; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 3px 8px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .mcp-section-title { font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: .06em; margin: 18px 0 8px; }
+    .mcp-filter-row { display:flex; gap:10px; flex-wrap:wrap; margin: 14px 0 4px; }
+    .mcp-filter-box { display:flex; align-items:center; gap:6px; }
+    .mcp-filter-label { font-size: 11px; color: var(--text2); }
+    .mcp-filter-select { min-width: 160px; padding: 6px 10px; background: var(--surface); border:1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 12px; }
+    .mcp-filter-input { min-width: 220px; padding: 6px 10px; background: var(--surface); border:1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 12px; }
+    .mcp-filter-badge { margin-left: auto; font-size: 11px; color: var(--text); border:1px solid var(--border); border-radius: 999px; padding: 6px 10px; background: var(--surface); }
+    .mcp-rule-group { margin-top: 14px; }
+    .mcp-rule-group-head { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+    .mcp-rule-group-title { font-size: 13px; font-weight: 600; color: var(--text); }
+    .mcp-rule-count { font-size: 11px; color: var(--text2); }
+    .mcp-rule-card { border:1px solid var(--border); background: var(--surface); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; }
+    .mcp-rule-head { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom: 6px; }
+    .mcp-rule-name { font-size: 12px; font-weight: 600; color: var(--text); }
+    .mcp-rule-pill { font-size: 10px; color: var(--text2); border:1px solid var(--border); border-radius: 999px; padding: 2px 7px; background: var(--bg); }
+    .mcp-rule-meta { font-size: 11px; color: var(--text2); display:flex; gap:10px; flex-wrap:wrap; margin-bottom: 8px; }
+    .mcp-rule-query { background: var(--bg); border:1px solid var(--border); border-radius: 6px; padding: 8px 10px; font-family: 'SF Mono', Menlo, monospace; font-size: 11px; line-height: 1.5; color: var(--text); white-space: pre-wrap; word-break: break-word; }
+    .mcp-empty { font-size: 12px; color: var(--text2); padding: 10px 12px; border:1px dashed var(--border); border-radius: 8px; }
+    /* ── Parse rules import/validate ───────────────────────────────── */
+    .pr-import-box { border:1px solid var(--border); border-radius:8px; padding:14px 16px; margin-bottom:12px; background:var(--surface); }
+    .pr-import-title { font-size:12px; font-weight:600; color:var(--text); margin-bottom:10px; display:flex; align-items:center; gap:8px; }
+    .pr-lang-select { padding:4px 10px; background:var(--bg); border:1px solid var(--border); border-radius:5px; color:var(--text); font-size:12px; }
+    .pr-textarea { width:100%; min-height:160px; padding:8px 10px; background:var(--bg); border:1px solid var(--border); border-radius:6px; color:var(--text); font-family:monospace; font-size:11px; line-height:1.6; resize:vertical; }
+    .pr-textarea:focus { outline:none; border-color:var(--accent); }
+    .pr-import-row { display:flex; align-items:center; gap:8px; margin-top:8px; }
+    .pr-sample { border:1px solid var(--border); border-radius:8px; margin-bottom:16px; overflow:hidden; }
+    .pr-sample-head { display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background:var(--surface); cursor:pointer; user-select:none; }
+    .pr-sample-head:hover { background:var(--surface2); }
+    .pr-sample-title { font-size:12px; font-weight:600; color:var(--text); }
+    .pr-sample-body { padding:12px; background:var(--bg); display:none; }
+    .pr-sample-body.open { display:block; }
+    .pr-sample-tabs { display:flex; gap:4px; margin-bottom:10px; flex-wrap:wrap; }
+    .pr-sample-tab { padding:3px 10px; border:1px solid var(--border); border-radius:5px; background:transparent; color:var(--text2); font-size:11px; cursor:pointer; }
+    .pr-sample-tab.active { background:#1f3552; color:var(--accent); border-color:var(--accent); }
+    .pr-sample-code { background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:10px 12px; font-family:monospace; font-size:11px; line-height:1.6; white-space:pre-wrap; color:var(--text2); overflow-x:auto; }
+    .pr-sample-desc { font-size:11px; color:var(--text2); margin-bottom:8px; line-height:1.5; }
+    .pr-validate-result { margin-top:10px; font-size:11px; }
+    .pr-validate-file { border:1px solid var(--border); border-radius:6px; margin-bottom:8px; overflow:hidden; }
+    .pr-validate-file-head { padding:6px 10px; background:var(--surface); font-family:monospace; font-size:11px; color:var(--text); display:flex; align-items:center; gap:8px; }
+    .pr-validate-file-body { padding:8px 10px; background:var(--bg); }
+    .pr-validate-error { color:var(--red); font-size:11px; padding:4px 8px; background:rgba(248,81,73,.08); border-radius:4px; margin-bottom:4px; font-family:monospace; }
+    .pr-validate-match { font-size:10px; color:var(--text2); padding:2px 0; }
+    .mcp-rule-group-actions { display:flex; align-items:center; gap:6px; margin-left:auto; }
+
+    /* ── RuleSet tree ─────────────────────────────────────────────── */
+    .rs-section-head { font-size:10px; color:var(--text2); text-transform:uppercase; letter-spacing:.07em; padding:4px 6px 2px; }
+    .rs-item { display:flex; align-items:center; gap:6px; padding:6px 8px; border-radius:6px; cursor:pointer; transition:background .12s; user-select:none; }
+    .rs-item:hover { background:var(--surface2); }
+    .rs-item.active { background:#1f3552; }
+    .rs-item-icon { font-size:13px; flex-shrink:0; }
+    .rs-item-name { font-size:12px; color:var(--text); font-weight:500; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .rs-item-lang { font-size:10px; color:var(--text2); background:var(--surface2); padding:1px 5px; border-radius:4px; flex-shrink:0; }
+    .rs-item-count { font-size:10px; color:var(--text2); flex-shrink:0; }
+    .rs-item-global { font-size:9px; color:var(--accent); background:rgba(88,166,255,.1); padding:1px 5px; border-radius:4px; flex-shrink:0; }
+    .rs-child { padding-left:20px; }
+    /* RuleSet detail panel */
+    .rs-panel-header { padding:16px 20px 12px; border-bottom:1px solid var(--border); flex-shrink:0; }
+    .rs-panel-title { font-size:16px; font-weight:700; color:var(--text); margin-bottom:4px; }
+    .rs-panel-meta { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:8px; }
+    .rs-badge { font-size:10px; padding:2px 7px; border-radius:4px; }
+    .rs-badge-lang { background:#1f3552; color:var(--accent); }
+    .rs-badge-global { background:rgba(63,185,80,.1); color:var(--green); }
+    .rs-badge-project { background:rgba(188,140,255,.1); color:var(--purple); }
+    .rs-badge-version { background:var(--surface2); color:var(--text2); }
+    .rs-panel-actions { display:flex; gap:6px; flex-wrap:wrap; }
+    .rs-panel-body { padding:16px 20px; }
+    .rs-section { margin-bottom:20px; }
+    .rs-section-title { font-size:11px; color:var(--text2); text-transform:uppercase; letter-spacing:.07em; margin-bottom:8px; display:flex; align-items:center; gap:8px; }
+    .rs-chain { display:flex; align-items:center; gap:4px; flex-wrap:wrap; }
+    .rs-chain-item { font-size:11px; padding:3px 8px; border:1px solid var(--border); border-radius:5px; cursor:pointer; color:var(--text2); transition:border-color .12s; }
+    .rs-chain-item:hover { border-color:var(--accent); color:var(--text); }
+    .rs-chain-arrow { color:var(--text2); font-size:11px; }
+    .rs-chain-current { border-color:var(--accent); color:var(--accent); cursor:default; }
+    .rs-links-list { display:flex; flex-direction:column; gap:6px; }
+    .rs-link-item { display:flex; align-items:center; gap:8px; padding:6px 10px; background:var(--surface); border:1px solid var(--border); border-radius:6px; font-size:11px; }
+    .rs-link-type { padding:2px 7px; border-radius:4px; font-size:10px; font-weight:600; }
+    .rs-link-inherit { background:rgba(88,166,255,.1); color:var(--accent); }
+    .rs-link-override { background:rgba(210,153,34,.1); color:var(--yellow); }
+    .rs-link-inject { background:rgba(188,140,255,.1); color:var(--purple); }
+    .rs-empty { font-size:12px; color:var(--text2); padding:8px 0; }
+    /* New RuleSet form */
+    .rs-form { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:14px 16px; margin:16px 20px; }
+    .rs-form-title { font-size:13px; font-weight:600; color:var(--text); margin-bottom:12px; }
+    .rs-form-row { display:flex; flex-direction:column; gap:4px; margin-bottom:10px; }
+    .rs-form-label { font-size:10px; color:var(--text2); text-transform:uppercase; letter-spacing:.05em; }
+    .rs-form-input { padding:7px 10px; background:var(--bg); border:1px solid var(--border); border-radius:6px; color:var(--text); font-size:12px; outline:none; }
+    .rs-form-input:focus { border-color:var(--accent); }
+    .rs-form-actions { display:flex; gap:8px; margin-top:4px; }
+  </style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<aside>
+  <div class="logo">
+    <span class="logo-icon">◈</span>
+    <span class="logo-text">KnowSync</span>
+    <span class="logo-ver">0.1</span>
+  </div>
+
+  <div class="project-select-wrap">
+    <div class="project-select-label">Project</div>
+    <div class="project-select-row">
+      <select id="project-select" class="project-select"><option value="">Loading…</option></select>
+      <button class="btn-icon" id="btn-add-proj" title="Add project" onclick="toggleAddProject()">+</button>
+      <button class="btn-icon" id="btn-cfg-proj" title="Project settings" onclick="openProjectSettings()">⚙</button>
+    </div>
+    <div id="add-project-form" class="inline-form" style="display:none">
+      <div class="path-field-row">
+        <input type="text" id="add-project-name" class="input-inline" placeholder="Tên project…" />
+      </div>
+      <div class="inline-form-actions">
+        <button class="btn-primary" onclick="doAddProject()">Add</button>
+        <button class="btn-secondary" onclick="cancelAddProject()">✕</button>
+      </div>
+      <div id="add-project-msg"></div>
+    </div>
+  </div>
+
+  <button class="nav-btn active" data-tab="graph">
+    <span class="nav-icon">◉</span> Graph
+  </button>
+  <button class="nav-btn" data-tab="search">
+    <span class="nav-icon">⌕</span> Search
+  </button>
+  <button class="nav-btn" data-tab="impact">
+    <span class="nav-icon">⚑</span> Impact
+  </button>
+  <button class="nav-btn" data-tab="flow">
+    <span class="nav-icon">⟶</span> Flow
+  </button>
+  <button class="nav-btn" data-tab="module">
+    <span class="nav-icon">▤</span> Module
+  </button>
+  <button class="nav-btn" data-tab="docs">
+    <span class="nav-icon">📄</span> Docs
+  </button>
+  <button class="nav-btn" data-tab="vdocs">
+    <span class="nav-icon">🔗</span> Visual Docs
+  </button>
+  <button class="nav-btn" data-tab="mcp">
+    <span class="nav-icon">⬡</span> MCP
+  </button>
+  <button class="nav-btn" data-tab="rules">
+    <span class="nav-icon">⚙</span> Parse Rules
+  </button>
+
+</aside>
+
+<!-- Main content -->
+<div id="main">
+
+  <!-- Graph tab -->
+  <section class="tab active" id="tab-graph">
+    <div id="graph-toolbar">
+      <button class="btn-index" id="btn-index" onclick="doIndex()">⟳ Index</button>
+      <button class="btn-index" id="btn-index-all" onclick="doIndexAll()">All</button>
+      <label class="delta-label"><input type="checkbox" id="index-delta" /> Delta</label>
+      <div class="toolbar-stats">
+        <span class="tstat"><span class="tsl">Symbols</span>&nbsp;<span class="tsv" id="stat-nodes">—</span></span>
+        <span class="tstat"><span class="tsl">Edges</span>&nbsp;<span class="tsv" id="stat-edges">—</span></span>
+        <span class="tstat"><span class="tsl">Clusters</span>&nbsp;<span class="tsv" id="stat-clusters">—</span></span>
+      </div>
+    </div>
+    <div id="sigma-wrap">
+      <div id="sigma-container"></div>
+      <div id="graph-search">
+        <input type="text" id="graph-search-input" placeholder="Filter nodes..." />
+      </div>
+      <div id="graph-panel">
+        <div class="panel-header">
+          <span class="panel-title" id="panel-name"></span>
+          <button class="panel-close" onclick="closePanel()">×</button>
+        </div>
+        <div id="panel-content"></div>
+      </div>
+      <div id="graph-legend"></div>
+    </div>
+  </section>
+
+  <!-- Search tab -->
+  <section class="tab" id="tab-search">
+    <div class="tab-inner">
+      <h2 class="tab-title">Search</h2>
+      <p class="tab-desc">Tìm symbol hoặc keyword trong toàn bộ knowledge graph.</p>
+      <div class="form-row">
+        <input type="text" id="search-input" class="input-lg" placeholder="Symbol name hoặc keyword..." />
+        <button class="btn-primary" onclick="doSearch()">Search</button>
+      </div>
+      <div id="search-type-filter" class="type-filter-bar" style="display:none"></div>
+      <div id="search-results"></div>
+    </div>
+  </section>
+
+  <!-- Impact tab -->
+  <section class="tab" id="tab-impact">
+    <div class="tab-inner">
+      <h2 class="tab-title">Impact Analysis</h2>
+      <p class="tab-desc">Phân tích symbols nào bị ảnh hưởng khi thay đổi một symbol.</p>
+      <div class="form-row">
+        <input type="text" id="impact-name" class="input-lg" placeholder="Symbol name..." />
+        <label class="label-inline">Depth <input type="number" id="impact-depth" class="input-sm" value="2" min="1" max="5" /></label>
+        <button class="btn-primary" onclick="doImpact()">Analyze</button>
+      </div>
+      <div id="impact-results"></div>
+    </div>
+  </section>
+
+  <!-- Flow tab -->
+  <section class="tab" id="tab-flow">
+    <div class="tab-inner">
+      <h2 class="tab-title">Process Flow</h2>
+      <p class="tab-desc">Trace call flow từ entry point code hoặc nối một luồng tài liệu xuống các symbol và CALLS flow trong code.</p>
+      <div class="form-row">
+        <select id="flow-mode" class="input-sm" style="min-width:130px">
+          <option value="code">Code Entry</option>
+          <option value="doc">Doc -> Code</option>
+        </select>
+        <input type="text" id="flow-entry" class="input-lg" placeholder="Entry point function hoặc doc heading..." />
+        <label class="label-inline">Doc Depth <input type="number" id="flow-doc-depth" class="input-sm" value="3" min="1" max="6" /></label>
+        <label class="label-inline">Code Depth <input type="number" id="flow-depth" class="input-sm" value="5" min="1" max="10" /></label>
+        <button class="btn-primary" onclick="doFlow()">Trace</button>
+      </div>
+      <div id="flow-results"></div>
+    </div>
+  </section>
+
+  <!-- Module tab -->
+  <section class="tab" id="tab-module">
+    <div class="tab-inner">
+      <h2 class="tab-title">Module Overview</h2>
+      <p class="tab-desc">Tổng quan symbols trong một module hoặc folder.</p>
+      <div class="form-row">
+        <input type="text" id="module-pattern" class="input-lg" placeholder="Module name hoặc file path..." />
+        <button class="btn-primary" onclick="doModule()">Overview</button>
+      </div>
+      <div id="module-results"></div>
+    </div>
+  </section>
+
+  <!-- Docs tab -->
+  <section class="tab" id="tab-docs">
+
+    <!-- Marks banner (persists across all sub-tabs) -->
+    <div id="marks-banner" style="display:none;padding:7px 20px;background:rgba(245,158,11,.08);border-bottom:1px solid rgba(245,158,11,.25);flex-shrink:0">
+      <div style="display:flex;align-items:center;gap:8px;max-width:900px">
+        <span class="marks-counter-dot"></span>
+        <span id="marks-banner-text" style="font-size:12px;color:#f59e0b;font-weight:500"></span>
+        <button class="btn-secondary" style="margin-left:auto;padding:2px 10px;font-size:11px" onclick="toggleMarksPanel()">Xem marks</button>
+      </div>
+      <div id="marks-panel" style="display:none;margin-top:8px;max-width:900px">
+        <div style="font-size:10px;color:var(--text2);margin-bottom:6px">AI agent đọc marks qua <code>knowsync_get_doc_link_marks</code> → cập nhật markdown/comment (<code>@symbol</code>, <code>[[Symbol]]</code>, <code>@doc:...</code>, <code>[[doc:...]]</code>) → gọi <code>knowsync_resolve_doc_link_mark</code></div>
+        <div id="marks-list" class="marks-list"></div>
+      </div>
+    </div>
+
+    <!-- Sub-tab nav -->
+    <div class="docs-subnav">
+      <button class="docs-subtab active" data-docs-tab="links" onclick="switchDocsTab('links')">Links</button>
+      <button class="docs-subtab" data-docs-tab="frefs" onclick="switchDocsTab('frefs')">Forward Refs</button>
+      <button class="docs-subtab" data-docs-tab="coverage" onclick="switchDocsTab('coverage')">Coverage</button>
+      <button class="docs-subtab" data-docs-tab="linked" onclick="switchDocsTab('linked')">Linked Docs</button>
+      <button class="docs-subtab" data-docs-tab="sync" onclick="switchDocsTab('sync')">Doc Sync</button>
+      <button class="docs-subtab" data-docs-tab="stale" onclick="switchDocsTab('stale')">Stale Links</button>
+    </div>
+
+    <!-- Sub-tab panels -->
+    <div class="docs-panels">
+
+      <!-- Links panel -->
+      <div class="docs-panel active" id="docs-panel-links">
+        <div class="tab-inner">
+          <div class="tab-title-row">
+            <h2 class="tab-title">Links</h2>
+            <button class="btn-secondary" onclick="loadAllLinks()">Refresh</button>
+          </div>
+          <p class="tab-desc">Tất cả liên kết doc→symbol. Thêm manual link hoặc unlink từng dòng.</p>
+          <div class="links-filter-row">
+            <button class="links-filter-btn active" data-links-mode="all" onclick="setDocsLinksMode('all', this)">All</button>
+            <button class="links-filter-btn" data-links-mode="code" onclick="setDocsLinksMode('code', this)">Doc→Code</button>
+            <button class="links-filter-btn" data-links-mode="before" onclick="setDocsLinksMode('before', this)">Before</button>
+            <button class="links-filter-btn" data-links-mode="after" onclick="setDocsLinksMode('after', this)">After</button>
+          </div>
+          <div id="links-mode-note" class="tab-desc" style="margin-bottom:10px">`All` hiển thị cả doc→code và doc layers.</div>
+          <div id="links-code-wrap">
+          <div class="form-row" style="margin-bottom:8px">
+            <input type="text" id="manual-link-doc" class="input-lg" placeholder="Doc section heading or ID…" style="flex:1.2" />
+            <input type="text" id="manual-link-sym" class="input-lg" placeholder="Symbol name…" style="flex:1" />
+            <button class="btn-primary" onclick="doManualLink()">Link</button>
+          </div>
+          <div id="manual-link-status" style="font-size:11px;margin-bottom:10px;min-height:16px"></div>
+          <div class="form-row" style="margin-bottom:8px">
+            <input type="text" id="manual-docref-doc" class="input-lg" placeholder="PRD doc section heading or ID…" style="flex:1.1" />
+            <input type="text" id="manual-docref-ref" class="input-lg" placeholder="Copied source: doc:../brd/PLA-01.md#slug" style="flex:1.4" />
+            <button class="btn-secondary" onclick="validateDocRefMark()">Validate</button>
+            <button class="btn-primary" id="manual-docref-mark-btn" onclick="createDocRefMark()" disabled>Mark</button>
+          </div>
+          <div id="manual-docref-status" style="font-size:11px;margin-bottom:10px;min-height:16px"></div>
+          <div id="manual-docref-preview" style="margin-bottom:10px"></div>
+          </div>
+          <div id="links-layers-wrap">
+          <div class="section-title">Doc Layers</div>
+          <div class="form-row" style="margin-bottom:8px">
+            <input type="text" id="doc-layers-query" class="input-lg" placeholder="Doc section heading or ID…" style="flex:1.3" />
+            <button class="btn-secondary" onclick="doDocLayers()">Inspect</button>
+          </div>
+          <div class="tab-desc" style="margin-bottom:10px">`Before` là tài liệu hiện tại đang tham chiếu tới. `After` là các tài liệu chi tiết hóa hoặc tham chiếu ngược về nó.</div>
+          <div id="doc-layers-results"></div>
+          </div>
+          <div id="links-table-wrap">
+          <div id="all-links-results"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Forward Refs panel -->
+      <div class="docs-panel" id="docs-panel-frefs">
+        <div class="tab-inner">
+          <div class="tab-title-row">
+            <h2 class="tab-title">Forward Refs</h2>
+            <button class="btn-secondary" onclick="loadForwardRefs()">Refresh</button>
+          </div>
+          <p class="tab-desc">Các ký hiệu <code>[[name]]</code> viết trong doc trước khi code tồn tại. Khi code được tạo, nhấn <strong>Promote</strong> để tạo link thật.</p>
+          <div id="forward-refs-results"></div>
+        </div>
+      </div>
+
+      <!-- Coverage panel -->
+      <div class="docs-panel" id="docs-panel-coverage">
+        <div class="tab-inner">
+          <div class="tab-title-row">
+            <h2 class="tab-title">Coverage</h2>
+            <button class="btn-secondary" onclick="doValidate()">Refresh</button>
+          </div>
+          <p class="tab-desc">Functions, Classes, Methods thiếu docstring và không có linked documentation.</p>
+          <div id="validate-results"></div>
+        </div>
+      </div>
+
+      <!-- Linked Docs panel -->
+      <div class="docs-panel" id="docs-panel-linked">
+        <div class="tab-inner">
+          <h2 class="tab-title">Linked Docs</h2>
+          <p class="tab-desc">Tìm tất cả tài liệu liên kết với một symbol.</p>
+          <div class="form-row">
+            <input type="text" id="linked-docs-name" class="input-lg" placeholder="Symbol name..." />
+            <button class="btn-primary" onclick="doLinkedDocs()">Find</button>
+          </div>
+          <div id="linked-docs-results"></div>
+        </div>
+      </div>
+
+      <!-- Doc Sync panel -->
+      <div class="docs-panel" id="docs-panel-sync">
+        <div class="tab-inner">
+          <h2 class="tab-title">Doc Sync</h2>
+          <p class="tab-desc">Kiểm tra symbol có docstring và linked docs không.</p>
+          <div class="form-row">
+            <input type="text" id="docsync-name" class="input-lg" placeholder="Symbol name..." />
+            <button class="btn-primary" onclick="doDocSync()">Check</button>
+          </div>
+          <div id="docsync-results"></div>
+        </div>
+      </div>
+
+      <!-- Stale Links panel -->
+      <div class="docs-panel" id="docs-panel-stale">
+        <div class="tab-inner">
+          <div class="tab-title-row">
+            <h2 class="tab-title">Stale Links</h2>
+            <button class="btn-secondary" onclick="doValidateLinks()">Check</button>
+          </div>
+          <p class="tab-desc">Tìm doc→symbol edges bị stale (symbol không còn tồn tại).</p>
+          <div id="validate-links-results"></div>
+        </div>
+      </div>
+
+    </div><!-- /docs-panels -->
+  </section>
+
+  <!-- Visual Docs tab -->
+  <section class="tab" id="tab-vdocs">
+    <div id="vdocs-toolbar">
+      <input type="text" id="vdocs-filter" class="input-lg" style="max-width:260px;font-size:12px;padding:6px 10px" placeholder="Filter by module or file…" />
+      <button class="btn-primary" style="padding:6px 14px;font-size:12px" onclick="loadDocGraph()">Apply</button>
+      <div class="vdocs-mode-tabs" id="vdocs-type-btns">
+        <button class="type-filter-pill active" data-vtype="outline" onclick="setVdocsType('outline')">Outline</button>
+        <button class="type-filter-pill" data-vtype="links" onclick="setVdocsType('links')">Links</button>
+      </div>
+      <label class="delta-label" style="margin-left:8px"><input type="checkbox" id="vdocs-expand-code" /> Code context</label>
+      <span id="vdocs-stats" style="margin-left:auto;font-size:11px;color:var(--text2)"></span>
+      <button class="btn-secondary" style="padding:5px 11px;font-size:12px;margin-left:8px" onclick="toggleVdocsConfig()" id="btn-vdocs-config" title="Configure doc sources & display">⚙ Config</button>
+    </div>
+    <!-- Visual Docs config panel -->
+    <div id="vdocs-config-panel" style="display:none;background:var(--surface);border-bottom:1px solid var(--border);padding:12px 18px;flex-shrink:0;overflow-y:auto;max-height:55vh">
+      <div style="display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap">
+
+        <!-- Left: doc sources -->
+        <div style="flex:1;min-width:340px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text2)">Doc Sources</span>
+            <span style="font-size:10px;color:var(--text2)">(Visual Docs chỉ đọc trong phạm vi này)</span>
+            <button class="btn-secondary" style="padding:3px 10px;font-size:11px;margin-left:auto" onclick="vdocsScanDocSources()" id="btn-vdocs-scan">⊙ Scan project</button>
+          </div>
+          <!-- Current sources list -->
+          <div id="vdocs-cfg-sources-list" style="margin-bottom:10px"></div>
+          <!-- Add / Edit form -->
+          <div id="vdocs-cfg-ds-form" style="padding:10px;border:1px dashed var(--border);border-radius:8px;background:var(--surface2)">
+            <div style="font-size:10px;color:var(--text2);margin-bottom:6px;font-weight:600" id="vdocs-cfg-ds-form-title">ADD DOC SOURCE</div>
+            <!-- Row 1: path + browse -->
+            <div style="display:flex;gap:4px;margin-bottom:6px;align-items:center">
+              <span style="font-size:11px;color:var(--text2);min-width:52px">Path</span>
+              <input type="text" id="vdocs-cfg-ds-path" class="input-inline" style="flex:1;font-size:12px;padding:5px 8px" placeholder="docs/architecture" />
+              <button class="btn-icon" title="Browse folder" onclick="browseFor('vdocs-cfg-ds-path')" style="padding:4px 8px;font-size:14px">📁</button>
+            </div>
+            <!-- Row 2: label + color + order -->
+            <div style="display:flex;gap:4px;margin-bottom:6px;align-items:center">
+              <span style="font-size:11px;color:var(--text2);min-width:52px">Label</span>
+              <input type="text" id="vdocs-cfg-ds-label" class="input-inline" style="flex:1;font-size:12px;padding:5px 8px" placeholder="Kiến trúc" />
+              <input type="color" id="vdocs-cfg-ds-color-picker" style="width:32px;height:28px;border:1px solid var(--border);border-radius:4px;background:var(--surface);cursor:pointer;padding:2px" title="Color" />
+              <input type="text" id="vdocs-cfg-ds-color" class="input-inline" style="width:76px;font-size:12px;padding:5px 8px" placeholder="#60a5fa" title="Hex color" />
+              <input type="number" id="vdocs-cfg-ds-order" class="input-inline" style="width:46px;font-size:12px;padding:5px 6px" placeholder="1" title="Display order" min="1" />
+            </div>
+            <!-- Row 3: excludeFiles -->
+            <div style="display:flex;gap:4px;margin-bottom:8px;align-items:center">
+              <span style="font-size:11px;color:var(--text2);min-width:52px">Exclude</span>
+              <input type="text" id="vdocs-cfg-ds-exclude" class="input-inline" style="flex:1;font-size:12px;padding:5px 8px" placeholder="full.md, index.md" title="File names to exclude (comma-separated)" />
+            </div>
+            <div style="display:flex;gap:6px">
+              <button class="btn-primary" style="padding:5px 14px;font-size:12px" id="vdocs-cfg-ds-submit" onclick="vdocsCfgSubmitSource()">+ Add</button>
+              <button class="btn-secondary" style="padding:5px 10px;font-size:12px;display:none" id="vdocs-cfg-ds-cancel" onclick="vdocsCfgCancelEdit()">Cancel</button>
+            </div>
+          </div>
+          <!-- Scan results -->
+          <div id="vdocs-cfg-scan-results" style="margin-top:10px;display:none"></div>
+        </div>
+
+        <!-- Right: display config -->
+        <div style="min-width:200px;max-width:240px">
+          <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text2);margin-bottom:8px">Display</div>
+          <div class="path-field-row" style="margin-bottom:6px">
+            <span class="path-field-label">Group by</span>
+            <select id="vdocs-cfg-structure" class="input-inline" onchange="document.getElementById('vdocs-cfg-depth-row').style.display=this.value==='folder'?'flex':'none'">
+              <option value="docSource">By doc source</option>
+              <option value="folder">By folder</option>
+              <option value="file">By file</option>
+              <option value="flat">Flat</option>
+            </select>
+          </div>
+          <div class="path-field-row" id="vdocs-cfg-depth-row" style="display:none;margin-bottom:6px">
+            <span class="path-field-label">Depth</span>
+            <input type="number" id="vdocs-cfg-depth" class="input-inline" min="1" max="6" value="2" style="width:52px" />
+          </div>
+          <div style="display:flex;gap:8px;margin-top:14px">
+            <button class="btn-primary" style="padding:6px 14px;font-size:12px;flex:1" onclick="vdocsCfgSave()">Save</button>
+            <button class="btn-secondary" style="padding:6px 10px;font-size:12px" onclick="toggleVdocsConfig()">Close</button>
+          </div>
+          <div id="vdocs-cfg-msg" style="margin-top:6px;font-size:11px"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <div id="vdocs-wrap">
+      <div id="vdocs-container"></div>
+      <div id="vdocs-empty" style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text2);flex-direction:column;gap:8px">
+        <div style="font-size:32px">🔗</div>
+        <div style="font-size:13px">Index docs trước, rồi nhấn <strong>Apply</strong></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MCP tab -->
+  <section class="tab" id="tab-mcp">
+    <div class="tab-inner">
+      <div class="tab-title-row">
+        <h2 class="tab-title">MCP Server</h2>
+        <button class="btn-secondary" onclick="loadMcpConfig()">Refresh</button>
+      </div>
+      <p class="tab-desc">Config để kết nối AI tools (Claude Desktop, Cursor, Windsurf) với project này qua MCP.</p>
+      <div id="mcp-results"></div>
+    </div>
+  </section>
+
+  <!-- Parse Rules tab -->
+  <section class="tab" id="tab-rules">
+    <div id="rules-layout" style="display:flex;height:100%;overflow:hidden">
+      <!-- Left: RuleSet tree -->
+      <div id="rs-sidebar" style="width:260px;flex-shrink:0;border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden">
+        <div style="padding:12px 12px 8px;border-bottom:1px solid var(--border);flex-shrink:0">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+            <span style="font-size:13px;font-weight:700;color:var(--text)">RuleSets</span>
+            <button class="btn-secondary" style="padding:2px 8px;font-size:11px;margin-left:auto" onclick="loadRuleSets()">↺</button>
+          </div>
+          <div style="display:flex;gap:6px">
+            <button class="btn-primary" style="flex:1;padding:5px 8px;font-size:11px" onclick="openNewRuleSetForm()">+ New</button>
+            <select id="rs-lang-filter" class="mcp-filter-select" style="flex:1;font-size:11px" onchange="loadRuleSets()">
+              <option value="">All languages</option>
+              <option value="typescript">TypeScript</option>
+              <option value="javascript">JavaScript</option>
+              <option value="python">Python</option>
+            </select>
+          </div>
+        </div>
+        <div id="rs-tree" style="flex:1;overflow-y:auto;padding:8px 6px"></div>
+      </div>
+      <!-- Right: detail panel OR welcome -->
+      <div id="rs-detail" style="flex:1;overflow-y:auto;display:flex;flex-direction:column">
+        <div id="rs-welcome" style="padding:32px;color:var(--text2);text-align:center;margin-top:60px">
+          <div style="font-size:32px;margin-bottom:12px">⚙</div>
+          <div style="font-weight:600;font-size:15px;margin-bottom:8px;color:var(--text)">Parse RuleSets</div>
+          <div style="font-size:13px;line-height:1.7;max-width:360px;margin:0 auto">
+            RuleSet = grammar + nhiều Tree-sitter queries.<br>
+            3 cấp: <b>Global</b> → <b>Project</b> → override.<br>
+            Chọn RuleSet bên trái để xem hoặc tạo mới.
+          </div>
+        </div>
+        <div id="rs-panel" style="display:none;flex:1;flex-direction:column"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Project Settings tab -->
+  <section class="tab" id="tab-settings">
+    <div class="tab-inner">
+      <div class="tab-title-row">
+        <h2 class="tab-title">Project Settings</h2>
+        <button class="btn-secondary" onclick="renderProjectConfig()">Refresh</button>
+      </div>
+      <div style="max-width:640px">
+        <div class="path-field-row" style="margin-bottom:8px">
+          <span class="path-field-label">Name</span>
+          <input type="text" id="cfg-name" class="input-inline" />
+        </div>
+        <div class="path-field-row" style="margin-bottom:8px">
+          <span class="path-field-label">Code</span>
+          <input type="text" id="cfg-code" class="input-inline" placeholder="Unique code identifier" />
+        </div>
+        <div style="margin-top:8px;margin-bottom:2px">
+          <div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Code Sources</div>
+          <div id="cfg-code-sources-list" class="doc-source-list"></div>
+          <div class="doc-source-add" style="flex-wrap:wrap;gap:4px">
+            <input type="text" id="cfg-cs-path" class="input-inline" style="flex:1;min-width:120px;font-size:11px;padding:3px 6px" placeholder="src, lib/core…" />
+            <button class="btn-icon btn-icon-sm" title="Browse folder" onclick="browseFor('cfg-cs-path')">📁</button>
+            <input type="text" id="cfg-cs-label" class="input-inline" style="width:72px;font-size:11px;padding:3px 6px" placeholder="label" />
+            <button class="btn-icon btn-icon-sm" id="cfg-cs-submit" title="Add or update code source" onclick="addCodeSource()">+</button>
+            <button class="btn-icon btn-icon-sm" id="cfg-cs-cancel" title="Cancel edit" style="display:none" onclick="resetCodeSourceForm()">×</button>
+          </div>
+          <div id="cfg-derived-root" style="font-size:11px;color:var(--text2);margin-top:3px"></div>
+        </div>
+        <div style="margin-top:8px;margin-bottom:2px">
+          <div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Doc Sources</div>
+          <div id="cfg-doc-sources-list" class="doc-source-list"></div>
+          <div class="doc-source-add" style="flex-wrap:wrap;gap:4px">
+            <input type="text" id="cfg-ds-path" class="input-inline" style="flex:1;min-width:120px;font-size:11px;padding:3px 6px" placeholder="docs/guide, README.md…" />
+            <button class="btn-icon btn-icon-sm" title="Browse folder" onclick="browseFor('cfg-ds-path')">📁</button>
+            <input type="text" id="cfg-ds-label" class="input-inline" style="width:72px;font-size:11px;padding:3px 6px" placeholder="label" />
+            <input type="text" id="cfg-ds-exclude" class="input-inline" style="width:80px;font-size:11px;padding:3px 6px" placeholder="full.md,…" title="Exclude files (comma-separated)" />
+            <input type="number" id="cfg-ds-order" class="input-inline" style="width:38px;font-size:11px;padding:3px 4px" placeholder="#" title="Display order" min="1" />
+            <input type="text" id="cfg-ds-color" class="input-inline" style="width:62px;font-size:11px;padding:3px 6px" placeholder="#color" title="Color hex" />
+            <button class="btn-icon btn-icon-sm" id="cfg-ds-submit" title="Add or update doc source" onclick="addDocSource()">+</button>
+            <button class="btn-icon btn-icon-sm" id="cfg-ds-cancel" title="Cancel edit" style="display:none" onclick="resetDocSourceForm()">×</button>
+          </div>
+        </div>
+        <div style="margin-top:16px;margin-bottom:2px">
+          <div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Visual Docs</div>
+          <div class="path-field-row">
+            <span class="path-field-label">Group by</span>
+            <select id="cfg-vdocs-structure" class="input-inline" onchange="document.getElementById('vdocs-depth-row').style.display=this.value==='folder'?'':'none'">
+              <option value="docSource">By doc source</option>
+              <option value="folder">By folder</option>
+              <option value="file">By file</option>
+              <option value="flat">Flat</option>
+            </select>
+          </div>
+          <div class="path-field-row" id="vdocs-depth-row" style="display:none">
+            <span class="path-field-label">Folder depth</span>
+            <input type="number" id="cfg-vdocs-depth" class="input-inline" min="1" max="6" value="2" />
+          </div>
+          <div style="font-size:10px;color:var(--text2);margin-top:4px">
+            <b>By doc source</b>: group theo label của Doc Sources. <b>By folder</b>: group theo thư mục (dùng depth).
+          </div>
+        </div>
+        <div id="cfg-stats" style="font-size:11px;color:var(--text2);padding:10px 0 4px"></div>
+        <div id="cfg-msg" style="margin-bottom:6px"></div>
+        <button class="btn-primary" style="width:100%;margin-bottom:8px;font-size:13px;padding:8px" onclick="saveProjectConfig()">Save</button>
+        <button class="btn-danger" onclick="doRemoveProject()">Remove from registry</button>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script src="/app.js"></script>
+<script src="/app-search.js"></script>
+<script src="/app-analysis.js"></script>
+<script src="/app-docs.js"></script>
+<script src="/app-mcp.js"></script>
+<script src="/app-parse-rules.js"></script>
+<script src="/app-rulesets.js"></script>
+<script src="/app-vdocs.js"></script>
+<script src="/app-vdocs-config.js"></script>
+<script src="/app-vdocs-outline.js"></script>
+<script src="/app-vdocs-graph.js"></script>
+
+
+<!-- Symbol popup modal -->
+<div id="sym-popup-overlay" class="sym-popup-overlay" style="display:none" onclick="if(event.target===this)closeSymPopup()">
+  <div class="sym-popup">
+    <div class="sym-popup-header">
+      <span id="sym-popup-title" class="sym-popup-title"></span>
+      <button class="sym-popup-close" onclick="closeSymPopup()">×</button>
+    </div>
+    <div id="sym-popup-body" class="sym-popup-body"></div>
+  </div>
+</div>
+</body>
+</html>

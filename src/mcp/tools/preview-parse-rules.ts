@@ -1,6 +1,6 @@
 import { createHash } from 'crypto';
 import { readFile, stat } from 'fs/promises';
-import { resolve } from 'path';
+import { isAbsolute } from 'path';
 import { z } from 'zod';
 import type { GraphDB } from '../../graph/db.js';
 import { crawlRepo } from '../../indexer/file-crawler.js';
@@ -8,6 +8,7 @@ import { parseCodeFile } from '../../indexer/code-parser.js';
 import { applyDocLinkRulesDetailed, dedupeDocSections } from '../../indexer/rules-engine.js';
 import type { EmbeddedDocRegion } from '../../types/index.js';
 import { createRequire } from 'module';
+import type { CodeSourceConfig } from '../../types/index.js';
 
 const require = createRequire(import.meta.url);
 type PreviewMatch = { captures: Array<{ name: string }> };
@@ -53,10 +54,9 @@ const ArtifactSchema = z.discriminatedUnion('artifactType', [
 ]);
 
 export const schema = {
-  rootPath: z.string().describe('Absolute path to the project root'),
   language: z.string().describe('Target language, e.g. "typescript", "python". Must be a supported Tree-sitter grammar for live preview.'),
-  filePaths: z.array(z.string()).optional().describe('Optional list of files to preview. Relative paths are resolved from rootPath.'),
-  limit: z.number().int().min(1).max(20).default(3).describe('How many files to preview when filePaths is omitted'),
+  filePaths: z.array(z.string()).optional().describe('Optional list of absolute file paths to preview. If omitted, files are auto-picked only from configured Code Sources.'),
+  limit: z.number().int().min(1).max(20).default(3).describe('How many files to preview when filePaths is omitted. Auto-pick only scans configured Code Sources.'),
   onlyRuleMatches: z.boolean().optional().describe('If true, return only doc sections generated from the provided query packs/rules'),
   matchDetails: z.boolean().optional().describe('If true, include raw capture names, line ranges, and matched rule names per file'),
   rules: z.array(RuleSchema).optional().describe('Direct parse rules to preview'),
@@ -148,7 +148,7 @@ export interface PreviewParseRulesResult {
 export async function previewParseRules(
   _db: GraphDB,
   args: {
-    rootPath: string;
+    codeSources?: CodeSourceConfig[];
     language: string;
     filePaths?: string[];
     limit?: number;
@@ -159,8 +159,6 @@ export async function previewParseRules(
     artifacts?: z.infer<typeof ArtifactSchema>[];
   },
 ): Promise<PreviewParseRulesResult | { ok: false; error: string }> {
-  const rootPath = resolve(args.rootPath);
-
   // Validate grammar is available before crawling
   try { getGrammar(args.language); } catch {
     return { ok: false, error: `Unsupported Tree-sitter grammar for language "${args.language}". Supported: javascript, typescript, python.` };
@@ -182,10 +180,23 @@ export async function previewParseRules(
   }));
 
   const files = args.filePaths?.length
-    ? args.filePaths.map((filePath) => resolve(rootPath, filePath))
-    : await pickPreviewFiles(rootPath, args.language, args.limit ?? 3);
+    ? args.filePaths
+    : await pickPreviewFiles(args.codeSources ?? [], args.language, args.limit ?? 3);
 
-  const artifactPreview = await previewArtifacts(rootPath, args.language, files, args.artifacts ?? []);
+  if (!files.length) {
+    return {
+      ok: false,
+      error: 'No preview files found. Configure Code Sources for the active project or pass explicit filePaths.',
+    };
+  }
+  if (files.some((filePath) => !isAbsolute(filePath))) {
+    return {
+      ok: false,
+      error: 'preview_parse_rules expects absolute filePaths. Auto-picked files come from absolute Code Sources.',
+    };
+  }
+
+  const artifactPreview = await previewArtifacts('', args.language, files, args.artifacts ?? []);
 
   const previews: PreviewFileResult[] = [];
   for (const filePath of files) {
@@ -324,8 +335,13 @@ function buildSectionTree(sections: Array<Omit<PreviewDocSectionNode, 'children'
 /**
  * KnowSync functional handler. Automatically synced via CLI Validation rule.
  */
-async function pickPreviewFiles(rootPath: string, language: string, limit: number): Promise<string[]> {
-  const { codeFiles } = await crawlRepo(rootPath, [language]);
+async function pickPreviewFiles(
+  codeSources: CodeSourceConfig[],
+  language: string,
+  limit: number,
+): Promise<string[]> {
+  if (!codeSources.length) return [];
+  const { codeFiles } = await crawlRepo([language], undefined, codeSources);
   return codeFiles.slice(0, limit).map((file) => file.filePath);
 }
 
@@ -373,7 +389,7 @@ async function parseTree(filePath: string, language: string) {
  * KnowSync functional handler. Automatically synced via CLI Validation rule.
  */
 async function previewArtifacts(
-  _rootPath: string,
+  _unusedSourceScope: string,
   language: string,
   filePaths: string[],
   artifacts: z.infer<typeof ArtifactSchema>[],

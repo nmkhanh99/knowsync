@@ -10,8 +10,6 @@ Tạo `knowsync.config.json` tại thư mục chỉ định (mặc định là t
 
 ```json
 {
-  "rootPath": ".",
-  "dbPath": ".knowsync/graph.db",
   "include": ["src/**/*.ts", "src/**/*.js"],
   "exclude": ["node_modules", "dist", ".git"],
   "languages": ["typescript", "javascript", "python"],
@@ -45,7 +43,7 @@ knowsync register /path/to/myproject \
   --docs-source README.md
 ```
 
-Mỗi `--docs-source` là một đường dẫn tương đối (file hoặc thư mục) trong repo.
+Mỗi `--docs-source` nên là absolute path tới file hoặc thư mục nguồn.
 
 `Code Sources` hiện được cấu hình qua Web UI hoặc MCP config. Sau khi áp dụng rule source-boundary mới:
 

@@ -7,10 +7,10 @@ import type { DocSourceConfig, VisualDocsConfig } from '../../types/index.js';
  * KnowSync functional handler. Automatically synced via CLI Validation rule.
  */
 export async function runRegister(
-  rootPath: string,
+  projectDir: string,
   opts: { docSources?: string[]; code?: string } = {},
 ): Promise<void> {
-  const absRoot = resolve(rootPath);
+  const absRoot = resolve(projectDir);
   const config = await loadConfig(absRoot).catch(() => ({
     docSources: [] as DocSourceConfig[],
     visualDocs: { structureMode: 'file', folderDepth: 2 } as VisualDocsConfig,
@@ -23,7 +23,6 @@ export async function runRegister(
   const visualDocs: VisualDocsConfig | undefined = config.visualDocs;
   const project = await registerProject(absRoot, docSources, visualDocs, undefined, undefined, opts.code);
   console.log(`Registered: ${project.name} [${project.id}]${project.code ? ` (Code: ${project.code})` : ''}`);
-  console.log(`  Root       : ${project.rootPath}`);
   if (project.docSources.length) {
     console.log(`  Doc sources:`);
     for (const s of project.docSources) {
@@ -58,7 +57,9 @@ export async function runList(): Promise<void> {
   for (const p of registry.projects) {
     const date = new Date(p.registeredAt).toLocaleDateString('vi-VN');
     console.log(`  [${p.id}]  ${p.name}${p.code ? ` (Code: ${p.code})` : ''}`);
-    console.log(`           ${p.rootPath}`);
+    if (p.codeSources?.length) {
+      console.log(`           code: ${p.codeSources.map((s) => s.path).join(', ')}`);
+    }
     if (p.docSources?.length) {
       console.log(`           docs: ${p.docSources.map((s) => s.path).join(', ')}`);
     }

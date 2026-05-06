@@ -69,9 +69,31 @@ Nguyên tắc:
 
 ### Workflow mới cho agent
 
+- `/setup-parse-rules`
+  - workflow duy nhất để setup hoặc mở rộng parse rules cho một project; truyền `projectCode=...` để chạy đủ chuỗi baseline -> round goal -> preview/refine -> RuleSet/apply -> rebuild/validate
+  - nếu muốn ép từng vòng nhỏ, thêm `roundGoal=fields|metadata|decorators|doc-links|calls`
 - `/trace-doc-to-code-flow`
   - dùng khi user bắt đầu từ tài liệu và muốn biết flow đó map xuống code thế nào
 - `/analyze-parse-rules`
   - dùng khi nghi parse rules/query packs/artifacts đang làm sai hoặc thiếu symbol/docs/links
+
+### Bootstrap parse rules cho project mới
+
+Với project như `mrp` đang chưa có parse rules riêng, nên đi theo thứ tự:
+
+1. cấu hình `Code Sources` và `Doc Sources`
+2. index baseline để xem parser built-in đã bắt được gì
+   - dùng `knowsync_get_graph_stats` để lấy `symbols`, `doc sections`, `edges`, `parse rules`, `parse artifacts`
+3. chọn 3-5 file mẫu đại diện
+4. chạy workflow `/setup-parse-rules projectCode=<project-code>`
+   - ví dụ vòng đầu: `/setup-parse-rules projectCode=mrp focusLanguage=python roundGoal=fields`
+5. chỉ apply rules sau khi preview sạch trên file mẫu
+6. rebuild graph toàn project
+7. nếu flow tài liệu -> code vẫn đứt, chạy tiếp `/analyze-parse-rules` hoặc `/trace-doc-to-code-flow`
+
+Lưu ý:
+- baseline và validation của workflow này nên đi qua MCP tools như `knowsync_get_graph_stats`, `knowsync_get_module_overview`, `knowsync_preview_parse_rules`
+- không đọc SQLite trực tiếp
+- heuristics chi tiết cho workflow này nằm trong skill `knowsync-parse-rules-setup`
 
 ---

@@ -111,7 +111,7 @@ Hãy cập nhật tài liệu này theo chuẩn KnowSync trace commenting:
 ### Re-index sau khi code thay đổi
 
 ```
-Dùng knowsync_build_graph với rootPath "/path/to/project", delta=true, includeDocs=true
+Dùng knowsync_build_graph với delta=true, includeDocs=true
 ```
 
 ### Workflow hoàn chỉnh — AI tự phân tích và cập nhật doc

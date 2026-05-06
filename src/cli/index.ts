@@ -70,10 +70,10 @@ program
   });
 
 program
-  .command('mcp [path]')
+  .command('mcp')
   .description('Start the MCP server for AI tools (Claude, Cursor, Windsurf)')
-  .action(async (path?: string) => {
-    await runMcpCommand(path ?? '.');
+  .action(async () => {
+    await runMcpCommand();
   });
 
 program.parseAsync(process.argv).catch((err) => {

@@ -18,13 +18,12 @@ const CodeSourceSchema = z.object({
 });
 
 export const schema = {
-  rootPath: z.string().describe('Absolute path to the project root — used for .gitignore and resolving relative paths'),
   delta: z.boolean().optional().describe('Only re-index changed files (default true)'),
   includeDocs: z.boolean().optional().describe('Also index Markdown docs (default true)'),
   codeSources: z.array(CodeSourceSchema).optional()
-    .describe('Explicit code directories to scan. When provided, only these paths are indexed for code instead of the full rootPath.'),
+    .describe('Explicit code directories to scan. If omitted, the active project Code Sources config is used.'),
   docSources: z.array(DocSourceSchema).optional()
-    .describe('Doc source directories/files to index. Label, excludeFiles, order, color control Visual Docs display.'),
+    .describe('Doc source directories/files to index. If omitted, the active project Doc Sources config is used. Label, excludeFiles, order, color control Visual Docs display.'),
   visualDocs: z.object({
     structureMode: z.enum(['file', 'folder', 'docSource', 'flat']).optional()
       .describe('How Visual Docs groups sections (default: docSource)'),
@@ -38,12 +37,13 @@ export const schema = {
 export async function buildGraph(
   db: GraphDB,
   args: {
-    rootPath: string;
     delta?: boolean;
     includeDocs?: boolean;
     codeSources?: CodeSourceConfig[];
     docSources?: DocSourceConfig[];
     visualDocs?: Partial<VisualDocsConfig>;
+    fallbackCodeSources?: CodeSourceConfig[];
+    fallbackDocSources?: DocSourceConfig[];
   },
 ) {
   if (args.codeSources?.length) {
@@ -59,13 +59,12 @@ export async function buildGraph(
 
   const codeSources = args.codeSources?.length
     ? args.codeSources
-    : (db.getProjectConfig<CodeSourceConfig[]>('codeSources') ?? []);
+    : (db.getProjectConfig<CodeSourceConfig[]>('codeSources') ?? args.fallbackCodeSources ?? []);
   const docSources = args.docSources?.length
     ? args.docSources
-    : (db.getProjectConfig<DocSourceConfig[]>('docSources') ?? []);
+    : (db.getProjectConfig<DocSourceConfig[]>('docSources') ?? args.fallbackDocSources ?? []);
 
   return runIndex(db, {
-    rootPath: args.rootPath,
     delta: args.delta ?? true,
     includeDocs: args.includeDocs ?? true,
     codeSources: codeSources.length ? codeSources : undefined,

@@ -19,18 +19,11 @@ import { checkDocSync } from '../mcp/tools/check-doc-sync.js';
 import { suggestDocLinks } from '../mcp/tools/suggest-doc-links.js';
 import { createDocLink } from '../mcp/tools/create-doc-link.js';
 import { validateLinks } from '../mcp/tools/validate-links.js';
+import type { RegisteredProject } from '../cli/registry.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-export interface ProjectEntry {
-  id: string;
-  code?: string;
-  name: string;
-  rootPath: string;
-  docSources: DocSourceConfig[];
-  codeSources?: CodeSourceConfig[];
-  visualDocs: VisualDocsConfig;
-}
+export type ProjectEntry = Pick<RegisteredProject, 'id' | 'code' | 'name' | 'docSources' | 'codeSources' | 'visualDocs'>;
 
 interface ResolvedDocRef {
   rawInput: string;
@@ -83,6 +76,18 @@ function buildCanonicalDocAnnotations(sourceFilePath: string, targetFilePath: st
     canonicalRef,
     annotationText: canonicalRef ? `@doc:${canonicalRef}` : '',
     wikiAnnotationText: canonicalRef ? `[[doc:${canonicalRef}]]` : '',
+  };
+}
+
+function toPublicProject(entry: ProjectEntry, extra?: Record<string, unknown>) {
+  return {
+    id: entry.id,
+    code: entry.code,
+    name: entry.name,
+    docSources: entry.docSources,
+    codeSources: entry.codeSources,
+    visualDocs: entry.visualDocs,
+    ...(extra ?? {}),
   };
 }
 
@@ -162,7 +167,7 @@ export async function startVizServer(initialProjects: ProjectEntry[], port: numb
     res.json(projects.map((p) => {
       const db = dbs.get(p.id);
       const stats = db ? db.getStats() : { nodeCount: 0, edgeCount: 0 };
-      return { ...p, ...stats };
+      return toPublicProject(p, stats);
     }));
   });
 
@@ -186,18 +191,16 @@ export async function startVizServer(initialProjects: ProjectEntry[], port: numb
   // ─── Register project at runtime ─────────────────────────────────────────
   app.post('/api/projects', express.json(), async (req, res) => {
     const body = req.body as Record<string, unknown>;
-    const rootPath = String(body?.rootPath ?? '').trim();
     const nameOverride = String(body?.name ?? '').trim() || undefined;
-    if (!rootPath && !nameOverride) { res.status(400).json({ error: 'name or rootPath required' }); return; }
+    if (!nameOverride) { res.status(400).json({ error: 'name required' }); return; }
     try {
-      const absRoot = rootPath ? resolve(rootPath) : '';
       const rawSources = body?.docSources;
       const rawCodeSources = body?.codeSources;
       const rawVisualDocs = body?.visualDocs;
       const docSources = Array.isArray(rawSources) ? (rawSources as DocSourceConfig[]) : [];
       const codeSources = Array.isArray(rawCodeSources) ? (rawCodeSources as CodeSourceConfig[]) : [];
       const visualDocs = rawVisualDocs && typeof rawVisualDocs === 'object' ? (rawVisualDocs as Partial<VisualDocsConfig>) : undefined;
-      const entry = await registerProject(absRoot, docSources, visualDocs, nameOverride, codeSources);
+      const entry = await registerProject('', docSources, visualDocs, nameOverride, codeSources);
       if (!dbs.has(entry.id)) {
         const db = new GraphDB(CENTRAL_DB_PATH, entry.id);
         await db.init();
@@ -206,7 +209,7 @@ export async function startVizServer(initialProjects: ProjectEntry[], port: numb
       }
       const db = dbs.get(entry.id)!;
       const stats = db.getStats();
-      res.json({ ...entry, ...stats });
+      res.json(toPublicProject(entry, stats));
     } catch (e) { res.status(500).json({ error: String(e) }); }
   });
 
@@ -226,7 +229,7 @@ export async function startVizServer(initialProjects: ProjectEntry[], port: numb
   // ─── Update project config ────────────────────────────────────────────────
   app.patch('/api/projects/:id', express.json(), async (req, res) => {
     const id = req.params['id'];
-    const body = req.body as { name?: string; code?: string; rootPath?: string; docSources?: DocSourceConfig[]; codeSources?: CodeSourceConfig[]; visualDocs?: Partial<VisualDocsConfig> };
+    const body = req.body as { name?: string; code?: string; docSources?: DocSourceConfig[]; codeSources?: CodeSourceConfig[]; visualDocs?: Partial<VisualDocsConfig> };
     try {
       const updated = await updateProject(id, body);
       if (!updated) { res.status(404).json({ error: 'Project not found' }); return; }
@@ -242,7 +245,7 @@ export async function startVizServer(initialProjects: ProjectEntry[], port: numb
       projects.push(updated);
 
       const stats = newDb.getStats();
-      res.json({ ...updated, ...stats });
+      res.json(toPublicProject(updated, stats));
     } catch (e) { res.status(500).json({ error: String(e) }); }
   });
 
@@ -256,7 +259,6 @@ export async function startVizServer(initialProjects: ProjectEntry[], port: numb
     const delta = req.query['delta'] === 'true';
     try {
       const summary = await runIndex(db, {
-        rootPath: proj.rootPath,
         includeDocs: true,
         delta,
         docSources: proj.docSources?.length ? proj.docSources : undefined,
@@ -278,7 +280,6 @@ export async function startVizServer(initialProjects: ProjectEntry[], port: numb
         const db = dbs.get(proj.id);
         if (!db) continue;
         const summary = await runIndex(db, {
-          rootPath: proj.rootPath,
           includeDocs: true,
           delta,
           docSources: proj.docSources?.length ? proj.docSources : undefined,
@@ -299,14 +300,12 @@ export async function startVizServer(initialProjects: ProjectEntry[], port: numb
     const proj = projects.find((p) => p.id === id);
     if (!proj) { err404(res); return; }
     const cliPath = process.argv[1];
-    const projectPath = proj.rootPath;
     const db = dbs.get(id) ?? null;
     res.json({
       cliPath,
-      projectPath,
-      claudeDesktop: { mcpServers: { knowsync: { command: 'node', args: [cliPath, 'mcp', projectPath] } } },
-      cursor: { mcpServers: { knowsync: { command: 'node', args: [cliPath, 'mcp', '.'] } } },
-      windsurf: { mcpServers: { knowsync: { command: 'node', args: [cliPath, 'mcp', projectPath] } } },
+      claudeDesktop: { mcpServers: { knowsync: { command: 'node', args: [cliPath, 'mcp'] } } },
+      cursor: { mcpServers: { knowsync: { command: 'node', args: [cliPath, 'mcp'] } } },
+      windsurf: { mcpServers: { knowsync: { command: 'node', args: [cliPath, 'mcp'] } } },
       parseRules: db ? db.getParseRules() : [],
       parseArtifacts: db ? db.getParseArtifacts() : [],
     });
@@ -362,7 +361,7 @@ export async function startVizServer(initialProjects: ProjectEntry[], port: numb
         artifactsForPreview = storedArtifacts as Parameters<typeof previewParseRules>[1]['artifacts'];
       }
       const result = await previewParseRules(db, {
-        rootPath: proj.rootPath,
+        codeSources: proj.codeSources,
         language,
         filePaths,
         limit: 3,
@@ -633,7 +632,6 @@ export async function startVizServer(initialProjects: ProjectEntry[], port: numb
       )];
       // Resolve each docSource path to an absolute prefix for SQL matching.
       // browseFor() returns absolute paths; MCP/manual entry may be relative.
-      const rootPath = proj?.rootPath ?? '';
       const includePathPrefixes = docSources.length
         ? docSources.map((ds) => {
           const cleaned = ds.path
@@ -642,7 +640,7 @@ export async function startVizServer(initialProjects: ProjectEntry[], port: numb
             .replace(/\/$/, '')
             .trim();
           if (!cleaned) return '';
-          return cleaned.startsWith('/') ? cleaned : resolve(rootPath, cleaned);
+          return cleaned;
         }).filter(Boolean)
         : [];
 
@@ -753,7 +751,9 @@ export async function startVizServer(initialProjects: ProjectEntry[], port: numb
     const proj = projects.find((p) => p.id === id);
     if (!proj) { err404(res); return; }
     try {
-      const result = scanDocSources(db, { rootPath: proj.rootPath });
+      const result = scanDocSources(db, {
+        seedPaths: [...(proj.docSources ?? []), ...(proj.codeSources ?? [])].map((source) => source.path.trim()).filter(Boolean),
+      });
       res.json(result);
     } catch (e) { res.status(500).json({ error: String(e) }); }
   });

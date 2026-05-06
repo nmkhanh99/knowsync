@@ -1,6 +1,6 @@
 # 7. MCP Tools — bảng đầy đủ
 
-MCP server hiện cung cấp **26 tools**. Tên file tài liệu cũ vẫn giữ để tránh đứt link, nhưng nội dung dưới đây phản ánh implementation hiện tại trong `src/mcp/server.ts`.
+MCP server hiện cung cấp **30 tools**. Tên file tài liệu cũ vẫn giữ để tránh đứt link, nhưng nội dung dưới đây phản ánh implementation hiện tại trong `src/mcp/server.ts`.
 
 ### Nhóm 1 — Graph query và context
 
@@ -12,8 +12,11 @@ MCP server hiện cung cấp **26 tools**. Tên file tài liệu cũ vẫn giữ
 | `knowsync_get_impact` | `symbolName`, `depth` | Impact analysis |
 | `knowsync_get_process_flow` | `entryPoint`, `maxDepth` | Trace call chain từ entry point |
 | `knowsync_get_doc_flow_trace` | `query`, `maxDocDepth`, `maxCodeDepth` | Trace từ flow tài liệu xuống doc layers, linked symbols, rồi CALLS flow trong code |
+| `knowsync_get_graph_stats` | none | Lấy baseline counts của graph, docs, parse rules, parse artifacts và source config của active project |
 | `knowsync_search_graph` | `query`, `nodeTypes?`, `limit?` | Tìm kiếm FTS5/BM25 trên symbols và docs |
 | `knowsync_check_doc_sync` | `symbolName` | Kiểm tra symbol có docs đồng bộ không |
+| `knowsync_get_project_info` | none | Lấy `activeProject` và danh sách `availableProjects` trong MCP session |
+| `knowsync_set_active_project` | `projectCode` | Chuyển active project trong MCP session theo project code |
 | `knowsync_get_module_overview` | `moduleName` | Tổng quan module |
 | `knowsync_get_doc_section_content` | `docSectionId` | Nội dung Markdown đầy đủ + slug + trace metadata + `relatedDocs` + `beforeDocs` + `afterDocs` |
 | `knowsync_get_full_context` | `symbolName` | Context giàu: callers + callees + docs + module siblings |
@@ -36,16 +39,16 @@ MCP server hiện cung cấp **26 tools**. Tên file tài liệu cũ vẫn giữ
 | Tool | Params chính | Mô tả |
 |------|-------------|-------|
 | `knowsync_provide_parse_rules` | `language`, `rules[]`, `queryPacks[]`, `artifacts[]`, `ruleSetId?` | Ghi parse rules vào DB |
-| `knowsync_preview_parse_rules` | `rootPath`, `language`, `filePaths?`, `limit?` | Preview rules trên file thật, không ghi DB |
+| `knowsync_preview_parse_rules` | `language`, `filePaths?`, `limit?` | Preview rules trên file thật, không ghi DB; nếu không truyền `filePaths` thì chỉ auto-pick từ `Code Sources` của active project |
 | `knowsync_preview_apply_parse_rules` | `mode`, `stateToken?`, `applyIndex?` | Preview nhiều vòng rồi apply/index |
-| `knowsync_build_graph` | `rootPath`, `delta?`, `includeDocs?`, `docSources?`, `codeSources?` | Trigger index + áp dụng parse rules |
+| `knowsync_build_graph` | `delta?`, `includeDocs?`, `docSources?`, `codeSources?` | Trigger index + áp dụng parse rules; chỉ scan `Code Sources` và `Doc Sources` của active project |
 
 ### Nhóm 4 — Doc source và Visual Docs config
 
 | Tool | Params chính | Mô tả |
 |------|-------------|-------|
-| `knowsync_scan_doc_sources` | `rootPath` | Quét các Markdown source khả dụng |
-| `knowsync_set_visual_docs_config` | `rootPath?`, `docSources?`, `codeSources?`, `visualDocs?` | Lưu config phục vụ Visual Docs |
+| `knowsync_scan_doc_sources` | `maxDepth?` | Quét candidate Markdown sources trong active project để gợi ý cấu hình `Doc Sources` |
+| `knowsync_set_visual_docs_config` | `docSources?`, `codeSources?`, `visualDocs?` | Lưu config phục vụ Visual Docs; `path` trong sources nên là absolute path |
 
 ### Nhóm 5 — RuleSet orchestration
 
@@ -56,6 +59,6 @@ MCP server hiện cung cấp **26 tools**. Tên file tài liệu cũ vẫn giữ
 
 ### Gợi ý sử dụng
 
-1. Khi cần đọc graph: bắt đầu bằng `knowsync_search_graph`, `knowsync_get_symbol`, `knowsync_get_full_context`
+1. Khi cần đọc graph: bắt đầu bằng `knowsync_get_graph_stats`, `knowsync_search_graph`, `knowsync_get_symbol`, `knowsync_get_full_context`
 2. Khi cần vá docs-link: dùng `knowsync_suggest_doc_links` → `knowsync_create_doc_link` → `knowsync_validate_links`
 3. Khi cần thêm parse rules: dùng `knowsync_preview_parse_rules` hoặc `knowsync_preview_apply_parse_rules` trước, rồi mới `knowsync_provide_parse_rules`

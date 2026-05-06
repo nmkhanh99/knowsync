@@ -34,14 +34,14 @@ export interface IndexSummary {
  * PRD-UI-002: keep embedded Markdown regions available for Visual Docs.
  */
 export async function runIndex(db: GraphDB, options: IndexOptions): Promise<IndexSummary> {
-  const { rootPath, includeDocs, delta, languages, docSources, codeSources } = options;
+  const { includeDocs, delta, languages, docSources, codeSources } = options;
   validateIndexSources({ includeDocs, codeSources, docSources });
   const t0 = Date.now();
   const parseRulesByLanguage = groupParseRulesByLanguage(db.getParseRules());
   const parseArtifactsByLanguage = groupParseArtifactsByLanguage(db.getParseArtifacts());
 
-  console.log(`  Scanning ${rootPath}${delta ? ' (delta)' : ''} …`);
-  const { codeFiles, docFiles } = await crawlRepo(rootPath, languages, docSources, codeSources?.length ? codeSources : undefined);
+  console.log(`  Scanning configured sources${delta ? ' (delta)' : ''} …`);
+  const { codeFiles, docFiles } = await crawlRepo(languages, docSources, codeSources?.length ? codeSources : undefined);
   console.log(`  Found ${codeFiles.length} code + ${docFiles.length} doc files`);
 
   let errors = 0;
@@ -70,7 +70,7 @@ export async function runIndex(db: GraphDB, options: IndexOptions): Promise<Inde
           parseRulesByLanguage.get(file.language) ?? [],
           parseArtifactsByLanguage.get(file.language) ?? [],
         );
-        const embeddedDocs = filterDocSectionsBySources(result.embeddedDocs, rootPath, docSources);
+        const embeddedDocs = filterDocSectionsBySources(result.embeddedDocs, docSources);
         const filteredResult = {
           ...result,
           embeddedDocs,
@@ -127,7 +127,7 @@ export async function runIndex(db: GraphDB, options: IndexOptions): Promise<Inde
     process.stdout.write(` ${docFiles.length - docSkipped} parsed, ${docSkipped} skipped\n`);
   }
 
-  wireDocLinksFromAllDocs(db, rootPath);
+  wireDocLinksFromAllDocs(db);
 
   // ─── Cross-file call resolution (second pass) ───────────────────────────────
   // Pending calls are callee names that couldn't be resolved within a single
@@ -266,7 +266,7 @@ function wireRequirementLinksFromDocs(
  * @doc:path/to/file.md#slug or [[doc:path/to/file.md#slug]] annotations.
  * @doc:../../docs/guide/19-9-huong-dan-ra-lenh-cho-ai-agent-qua-mcp.md#chuan-annotation-khi-ai-viet-docscode
  */
-function wireDocLinksFromAllDocs(db: GraphDB, rootPath: string): void {
+function wireDocLinksFromAllDocs(db: GraphDB): void {
   const sections = db.searchDocs('', 5000);
   const docsByFile = new Map<string, DocSection[]>();
 
@@ -278,7 +278,7 @@ function wireDocLinksFromAllDocs(db: GraphDB, rootPath: string): void {
 
   for (const section of sections) {
     for (const rawTarget of section.linkedDocTargets ?? []) {
-      const target = resolveDocTarget(db, rootPath, section.filePath, rawTarget, docsByFile);
+      const target = resolveDocTarget(db, section.filePath, rawTarget, docsByFile);
       if (!target || target.id === section.id) continue;
       db.upsertEdge({
         id: `${section.id}->REFERENCES_DOC->${target.id}`,
@@ -295,7 +295,6 @@ function wireDocLinksFromAllDocs(db: GraphDB, rootPath: string): void {
  */
 function resolveDocTarget(
   db: GraphDB,
-  rootPath: string,
   sourceFilePath: string,
   rawTarget: string,
   docsByFile: Map<string, DocSection[]>,
@@ -314,7 +313,6 @@ function resolveDocTarget(
     candidatePaths.add(rawPath);
   } else {
     candidatePaths.add(resolve(dirname(sourceFilePath), rawPath));
-    candidatePaths.add(resolve(rootPath, rawPath));
   }
 
   for (const filePath of candidatePaths) {
@@ -378,12 +376,11 @@ function groupParseArtifactsByLanguage(artifacts: ParseArtifact[]): Map<string, 
  */
 function filterDocSectionsBySources(
   sections: DocSection[],
-  rootPath: string,
   docSources?: DocSourceConfig[],
 ): DocSection[] {
   if (!sections.length) return sections;
   if (!docSources?.length) return [];
-  return sections.filter((section) => matchesDocSources(section.filePath, rootPath, docSources));
+  return sections.filter((section) => matchesDocSources(section.filePath, docSources));
 }
 
 /**
@@ -391,7 +388,6 @@ function filterDocSectionsBySources(
  */
 function matchesDocSources(
   filePath: string,
-  rootPath: string,
   docSources: DocSourceConfig[],
 ): boolean {
   const absFilePath = resolve(filePath);
@@ -404,7 +400,7 @@ function matchesDocSources(
       .replace(/\/$/, '')
       .trim();
     if (!cleaned) return false;
-    const absSourcePath = resolve(rootPath, cleaned);
+    const absSourcePath = resolve(cleaned);
     return absFilePath === absSourcePath || absFilePath.startsWith(absSourcePath + '/');
   });
 }

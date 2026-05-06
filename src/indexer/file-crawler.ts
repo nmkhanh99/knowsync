@@ -1,18 +1,7 @@
 import { readdir, stat, readFile } from 'fs/promises';
-import { join, extname, relative, resolve } from 'path';
+import { join, extname, resolve } from 'path';
 import { createHash } from 'crypto';
-import { createRequire } from 'module';
 import type { CodeSourceConfig, DocSourceConfig } from '../types/index.js';
-
-const require = createRequire(import.meta.url);
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const ignoreLib = require('ignore') as any;
-const createIgnore: () => IgnoreInstance = ignoreLib.default ?? ignoreLib;
-
-interface IgnoreInstance {
-  add: (pattern: string) => IgnoreInstance;
-  ignores: (path: string) => boolean;
-}
 
 const SUPPORTED_EXTENSIONS: Record<string, string> = {
   '.js': 'javascript',
@@ -37,12 +26,10 @@ export interface CrawlResult {
  * KnowSync functional handler. Automatically synced via CLI Validation rule.
  */
 export async function crawlRepo(
-  rootPath: string,
   languages?: string[],
   docSources?: DocSourceConfig[],
   codeSources?: CodeSourceConfig[],
 ): Promise<CrawlResult> {
-  const ig = await loadGitignore(rootPath);
   const codeFiles: CrawlResult['codeFiles'] = [];
   const docFiles: CrawlResult['docFiles'] = [];
 
@@ -50,7 +37,7 @@ export async function crawlRepo(
   if (codeSources && codeSources.length > 0) {
     const seen = new Set<string>();
     for (const source of codeSources) {
-      await crawlCodeSource(rootPath, source, codeFiles, seen, languages);
+      await crawlCodeSource(source, codeFiles, seen, languages);
     }
   }
 
@@ -58,7 +45,7 @@ export async function crawlRepo(
   if (docSources && docSources.length > 0) {
     const seen = new Set<string>();
     for (const source of docSources) {
-      await crawlDocSource(rootPath, source, docFiles, seen);
+      await crawlDocSource(source, docFiles, seen);
     }
   }
 
@@ -69,13 +56,12 @@ export async function crawlRepo(
  * KnowSync functional handler. Automatically synced via CLI Validation rule.
  */
 async function crawlCodeSource(
-  rootPath: string,
   source: CodeSourceConfig,
   codeFiles: CrawlResult['codeFiles'],
   seen: Set<string>,
   languages?: string[],
 ): Promise<void> {
-  const absPath = resolve(rootPath, source.path.trim());
+  const absPath = resolve(source.path.trim());
   try {
     const s = await stat(absPath);
     if (s.isDirectory()) {
@@ -129,7 +115,6 @@ async function walkCodeDir(
  * KnowSync functional handler. Automatically synced via CLI Validation rule.
  */
 async function crawlDocSource(
-  rootPath: string,
   source: DocSourceConfig,
   docFiles: CrawlResult['docFiles'],
   seen: Set<string>,
@@ -143,11 +128,11 @@ async function crawlDocSource(
     const baseDir = beforeWild.includes('/')
       ? beforeWild.slice(0, beforeWild.lastIndexOf('/'))
       : '.';
-    await walkDocDir(resolve(rootPath, baseDir), docFiles, seen);
+    await walkDocDir(resolve(baseDir), docFiles, seen);
     return;
   }
 
-  const absPath = resolve(rootPath, rawPath);
+  const absPath = resolve(rawPath);
   try {
     const s = await stat(absPath);
     if (s.isDirectory()) {
@@ -194,62 +179,9 @@ async function walkDocDir(
 /**
  * KnowSync functional handler. Automatically synced via CLI Validation rule.
  */
-async function walk(
-  rootPath: string,
-  dir: string,
-  ig: IgnoreInstance,
-  codeFiles: CrawlResult['codeFiles'],
-  docFiles: CrawlResult['docFiles'],
-  languages?: string[]
-): Promise<void> {
-  const entries = await readdir(dir, { withFileTypes: true });
-
-  for (const entry of entries) {
-    const fullPath = join(dir, entry.name);
-    const relPath = relative(rootPath, fullPath);
-
-    if (entry.name.startsWith('.')) continue;
-    if (ig.ignores(relPath)) continue;
-
-    if (entry.isDirectory()) {
-      if (entry.name === 'node_modules' || entry.name === 'dist') continue;
-      await walk(rootPath, fullPath, ig, codeFiles, docFiles, languages);
-    } else if (entry.isFile()) {
-      const ext = extname(entry.name).toLowerCase();
-
-      if (DOC_EXTENSIONS.has(ext)) {
-        const info = await fileInfo(fullPath);
-        docFiles.push({ filePath: fullPath, ...info });
-      } else if (ext in SUPPORTED_EXTENSIONS) {
-        const lang = SUPPORTED_EXTENSIONS[ext];
-        if (languages && !languages.includes(lang)) continue;
-        const info = await fileInfo(fullPath);
-        codeFiles.push({ filePath: fullPath, language: lang, ...info });
-      }
-    }
-  }
-}
-
-/**
- * KnowSync functional handler. Automatically synced via CLI Validation rule.
- */
 async function fileInfo(filePath: string): Promise<{ contentHash: string; lastModified: number }> {
   const s = await stat(filePath);
   const content = await readFile(filePath);
   const contentHash = createHash('sha256').update(content).digest('hex').slice(0, 16);
   return { contentHash, lastModified: s.mtimeMs };
-}
-
-/**
- * KnowSync functional handler. Automatically synced via CLI Validation rule.
- */
-async function loadGitignore(rootPath: string): Promise<IgnoreInstance> {
-  const ig = createIgnore();
-  try {
-    const content = await readFile(join(rootPath, '.gitignore'), 'utf-8');
-    ig.add(content);
-  } catch {
-    // no .gitignore is fine
-  }
-  return ig;
 }

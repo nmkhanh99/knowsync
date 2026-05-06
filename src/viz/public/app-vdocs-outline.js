@@ -292,8 +292,7 @@
           (!section.docSetLabel && node.label === 'Other docs')
         );
       } else if (node.groupKind === 'docSource' && node.sourcePath) {
-        const projectRoot = currentProjectEntry()?.rootPath || '';
-        scoped = allSections.filter((section) => matchesSourceScope(section, node.sourcePath, projectRoot, node.label));
+        scoped = allSections.filter((section) => matchesSourceScope(section, node.sourcePath, '', node.label));
       } else {
         const prefix = Array.isArray(node.path) ? node.path : [];
         scoped = allSections.filter((section) => hasPathPrefix(section, prefix));
@@ -594,22 +593,15 @@
   /**
    * Auto-documented structural element.
    */
-  function relativeDocPath(file, rootPath) {
-    const normalizedFile = normalizeSlashes(file);
-    const normalizedRoot = normalizeSlashes(rootPath).replace(/\/$/, '');
-    if (normalizedRoot && normalizedFile.startsWith(normalizedRoot + '/')) {
-      return normalizedFile.slice(normalizedRoot.length + 1);
-    }
-    return normalizedFile;
+  function relativeDocPath(file) {
+    return normalizeSlashes(file);
   }
 
   /**
    * Auto-documented structural element.
    */
   function docSourceMatch(file, project) {
-    const rootPath = project && project.rootPath ? project.rootPath : '';
     const docSources = project && Array.isArray(project.docSources) ? project.docSources : [];
-    const relative = relativeDocPath(file, rootPath);
     let best = null;
     for (const source of docSources) {
       const raw = normalizeSlashes(source.path || '');
@@ -618,7 +610,8 @@
         .replace(/\*.*$/, '')
         .replace(/\/$/, '');
       if (!prefix) continue;
-      if (relative === prefix || relative.startsWith(prefix + '/')) {
+      const normalizedFile = normalizeSlashes(file);
+      if (normalizedFile === prefix || normalizedFile.startsWith(prefix + '/')) {
         if (!best || prefix.length > best.prefix.length) best = { source, prefix };
       }
     }
@@ -629,7 +622,7 @@
    * Auto-documented structural element.
    */
   function visualDocsGroupForFile(file, project, config) {
-    const relative = relativeDocPath(file, project && project.rootPath ? project.rootPath : '');
+    const relative = relativeDocPath(file, '');
     const segments = relative.split('/').filter(Boolean);
     if (config.structureMode === 'flat') {
       return { id: 'docgroup:flat', label: 'All docs', path: ['All docs'], groupKind: 'flat' };
@@ -712,7 +705,7 @@
 
       const useFileNode = config.structureMode !== 'flat';
       if (useFileNode) {
-        const relative = relativeDocPath(file, project && project.rootPath ? project.rootPath : '');
+        const relative = relativeDocPath(file, '');
         const fileNodeId = 'docfile:' + file;
         const fileNode = {
           id: fileNodeId,

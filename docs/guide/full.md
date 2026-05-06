@@ -42,8 +42,6 @@ Tạo `knowsync.config.json` tại thư mục chỉ định (mặc định là t
 
 ```json
 {
-  "rootPath": ".",
-  "dbPath": ".knowsync/graph.db",
   "include": ["src/**/*.ts", "src/**/*.js"],
   "exclude": ["node_modules", "dist", ".git"],
   "languages": ["typescript", "javascript", "python"],
@@ -77,7 +75,7 @@ knowsync register /path/to/myproject \
   --docs-source README.md
 ```
 
-Mỗi `--docs-source` là một đường dẫn tương đối (file hoặc thư mục) trong repo.
+Mỗi `--docs-source` nên là absolute path tới file hoặc thư mục nguồn.
 
 `Code Sources` hiện được cấu hình qua Web UI hoặc MCP config. Sau khi áp dụng rule source-boundary mới:
 
@@ -472,7 +470,7 @@ Hiển thị config JSON để kết nối AI tools với project hiện tại q
 
 Nhấn **Copy** → dán vào file config tương ứng → khởi động lại AI tool.
 
-> CLI tương đương: `knowsync mcp /path/to/project`
+> CLI tương đương: `knowsync mcp`
 
 Sau khi kết nối, nên hướng dẫn agent dùng đúng trace annotation khi sửa docs/code:
 
@@ -505,10 +503,10 @@ Nếu đang dùng workflow agent:
 Mỗi entry có dạng:
 
 ```json
-{ "path": "docs", "label": "guides" }
+{ "path": "/abs/path/to/project/docs", "label": "guides" }
 ```
 
-`label` là tùy chọn. `path` là đường dẫn tương đối trong repo (file hoặc thư mục).
+`label` là tùy chọn. `path` nên là absolute path tới file hoặc thư mục nguồn.
 
 ### 3 cách cấu hình docSources
 
@@ -531,11 +529,10 @@ Nhấn **⚙** → tìm phần **Doc Sources** → Add entry (nhập path và la
 {
   "tool": "knowsync_build_graph",
   "args": {
-    "rootPath": "/path/to/myproject",
     "includeDocs": true,
     "docSources": [
-      { "path": "docs" },
-      { "path": "README.md" }
+      { "path": "/abs/path/to/myproject/docs" },
+      { "path": "/abs/path/to/myproject/README.md" }
     ]
   }
 }
@@ -556,10 +553,10 @@ Nhấn **⚙** → tìm phần **Code Sources** → Add entry → **Save**.
   "tool": "knowsync_set_visual_docs_config",
   "args": {
     "codeSources": [
-      { "path": "src", "label": "app" }
+      { "path": "/abs/path/to/myproject/src", "label": "app" }
     ],
     "docSources": [
-      { "path": "docs", "label": "docs" }
+      { "path": "/abs/path/to/myproject/docs", "label": "docs" }
     ]
   }
 }
@@ -667,7 +664,7 @@ Tab **MCP** trong Web UI tự động tạo config JSON sẵn sàng copy-paste c
 
 ## 7. MCP Tools — bảng đầy đủ
 
-MCP server hiện cung cấp 27 tools. Bản rút gọn mới nhất nằm ở `docs/guide/15-7-17-mcp-tools-bang-ay-u.md`. Khi agent cần hiểu phần này theo source, bám trực tiếp `@startMcpServer`, `@provideParseRules`, `@previewParseRules`, `@previewApplyParseRules`, `@suggestDocLinks`, `@createDocLink`, `@validateLinks`.
+MCP server hiện cung cấp 30 tools. Bản rút gọn mới nhất nằm ở `docs/guide/15-7-17-mcp-tools-bang-ay-u.md`. Khi agent cần hiểu phần này theo source, bám trực tiếp `@startMcpServer`, `@provideParseRules`, `@previewParseRules`, `@previewApplyParseRules`, `@suggestDocLinks`, `@createDocLink`, `@validateLinks`.
 
 ### Nhóm 1 — Graph query và context
 
@@ -679,6 +676,7 @@ MCP server hiện cung cấp 27 tools. Bản rút gọn mới nhất nằm ở `
 | `knowsync_get_impact` | `symbolName`, `depth` (1–5) | Phân tích impact: direct callers, transitive callers, linked docs |
 | `knowsync_get_process_flow` | `entryPoint`, `maxDepth` (1–10) | Trace call chain từ entry point |
 | `knowsync_get_doc_flow_trace` | `query`, `maxDocDepth`, `maxCodeDepth` | Trace từ flow tài liệu xuống doc layers, linked symbols, rồi CALLS flow trong code |
+| `knowsync_get_graph_stats` | none | Lấy baseline counts của graph, docs, parse rules, parse artifacts và source config của active project |
 | `knowsync_search_graph` | `query`, `nodeTypes?`, `limit?` | Tìm kiếm FTS5/BM25 trên symbols và docs |
 | `knowsync_check_doc_sync` | `symbolName` | Kiểm tra symbol có docstring và có DocSection liên kết không |
 | `knowsync_get_module_overview` | `moduleName` | Tổng quan: symbols, files, top-called trong module |
@@ -703,16 +701,16 @@ MCP server hiện cung cấp 27 tools. Bản rút gọn mới nhất nằm ở `
 | Tool | Params chính | Mô tả |
 |------|-------------|-------|
 | `knowsync_provide_parse_rules` | `language`, `rules[]`, `queryPacks[]`, `artifacts[]`, `ruleSetId?` | Ghi parse rules vào DB |
-| `knowsync_preview_parse_rules` | `rootPath`, `language`, `filePaths?`, `limit?` | Preview rules trên file thật, không ghi DB |
+| `knowsync_preview_parse_rules` | `language`, `filePaths?`, `limit?` | Preview rules trên file thật, không ghi DB; nếu không truyền `filePaths` thì chỉ auto-pick từ `Code Sources` |
 | `knowsync_preview_apply_parse_rules` | `mode`, `stateToken?`, `applyIndex?` | Preview nhiều vòng rồi apply/index |
-| `knowsync_build_graph` | `rootPath`, `delta?`, `includeDocs?`, `docSources?`, `codeSources?` | Trigger index + áp dụng parse rules; không có sources phù hợp thì lỗi |
+| `knowsync_build_graph` | `delta?`, `includeDocs?`, `docSources?`, `codeSources?` | Trigger index + áp dụng parse rules; chỉ scan `Code Sources` và `Doc Sources` |
 
 ### Nhóm 4 — Doc source và Visual Docs config
 
 | Tool | Params chính | Mô tả |
 |------|-------------|-------|
-| `knowsync_scan_doc_sources` | `rootPath` | Quét các Markdown source khả dụng |
-| `knowsync_set_visual_docs_config` | `rootPath?`, `docSources?`, `codeSources?`, `visualDocs?` | Lưu config phục vụ Visual Docs |
+| `knowsync_scan_doc_sources` | `maxDepth?` | Quét candidate Markdown sources trong active project |
+| `knowsync_set_visual_docs_config` | `docSources?`, `codeSources?`, `visualDocs?` | Lưu config phục vụ Visual Docs; `path` trong sources nên là absolute path |
 
 ### Nhóm 5 — RuleSet orchestration
 
@@ -792,7 +790,7 @@ Rules được lưu persistent trong DB — không cần cung cấp lại sau m�
 ### Workflow AI Parse Rules
 
 ```
-1. AI gọi knowsync_preview_parse_rules(rootPath="/path/to/project", language="typescript", queryPacks=[...])
+1. AI gọi knowsync_preview_parse_rules(language="typescript", filePaths=["/abs/path/to/project/src/a.ts"], queryPacks=[...])
    → Xem trước `matchDetails`, `queryErrors`, `embeddedDocRegions`
    → Sửa query/rule nếu preview chưa sạch
 
@@ -803,7 +801,7 @@ Rules được lưu persistent trong DB — không cần cung cấp lại sau m�
 3. AI gọi knowsync_provide_parse_rules(language="typescript", rules=[...])
    → Rules lưu vào DB với priority
 
-4. AI gọi knowsync_build_graph(rootPath="/path/to/project", delta=false)
+4. AI gọi knowsync_build_graph(delta=false)
    → RulesEngine load rules từ DB
    → Parse với cả built-in patterns lẫn AI rules
    → Graph được rebuild
@@ -962,7 +960,7 @@ Embedded Markdown:
 | `knowsync index [path]` | `--docs`, `--delta`, `--all` | Index code từ `Code Sources`, và docs từ `Doc Sources` khi có `--docs` |
 | `knowsync validate [path]` | — | Tìm symbols thiếu docs |
 | `knowsync viz [path]` | `-p, --port <number>` | Mở Web UI (mặc định port 4242) |
-| `knowsync mcp [path]` | — | Khởi động MCP server (stdio) |
+| `knowsync mcp` | — | Khởi động MCP server (stdio) |
 
 ---
 
@@ -1026,10 +1024,32 @@ Workflow ngắn cho agent:
 
 ### Workflow mới cho agent
 
+- `/setup-parse-rules`
+  - workflow duy nhất để setup hoặc mở rộng parse rules cho một project; truyền `projectCode=...` để chạy đủ chuỗi baseline -> round goal -> preview/refine -> RuleSet/apply -> rebuild/validate
+  - nếu muốn ép từng vòng nhỏ, thêm `roundGoal=fields|metadata|decorators|doc-links|calls`
 - `/trace-doc-to-code-flow`
   - dùng khi user bắt đầu từ tài liệu và muốn biết flow đó map xuống code thế nào
 - `/analyze-parse-rules`
   - dùng khi nghi parse rules/query packs/artifacts đang làm sai hoặc thiếu symbol/docs/links
+
+### Bootstrap parse rules cho project mới
+
+Với project như `mrp` đang chưa có parse rules riêng, nên đi theo thứ tự:
+
+1. cấu hình `Code Sources` và `Doc Sources`
+2. index baseline để xem parser built-in đã bắt được gì
+   - dùng `knowsync_get_graph_stats` để lấy `symbols`, `doc sections`, `edges`, `parse rules`, `parse artifacts`
+3. chọn 3-5 file mẫu đại diện
+4. chạy workflow `/setup-parse-rules projectCode=<project-code>`
+   - ví dụ vòng đầu: `/setup-parse-rules projectCode=mrp focusLanguage=python roundGoal=fields`
+5. chỉ apply rules sau khi preview sạch trên file mẫu
+6. rebuild graph toàn project
+7. nếu flow tài liệu -> code vẫn đứt, chạy tiếp `/analyze-parse-rules` hoặc `/trace-doc-to-code-flow`
+
+Lưu ý:
+- baseline và validation của workflow này nên đi qua MCP tools như `knowsync_get_graph_stats`, `knowsync_get_module_overview`, `knowsync_preview_parse_rules`
+- không đọc SQLite trực tiếp
+- heuristics chi tiết cho workflow này nằm trong skill `knowsync-parse-rules-setup`
 
 Nguyên tắc:
 - dùng `suggest` để tìm cặp tiềm năng, không link mù
@@ -1133,7 +1153,8 @@ Hãy cập nhật tài liệu này theo chuẩn KnowSync trace commenting:
 ### Re-index sau khi code thay đổi
 
 ```
-Dùng knowsync_build_graph với rootPath "/path/to/project", delta=true, includeDocs=true
+Dùng knowsync_build_graph với delta=true, includeDocs=true.
+Phạm vi quét chỉ lấy từ Code Sources và Doc Sources đã cấu hình.
 ```
 
 ### Workflow hoàn chỉnh — AI tự phân tích và cập nhật doc

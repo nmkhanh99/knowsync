@@ -135,34 +135,6 @@ let _cfgCodeSourceEditIdx = -1;
 /**
  * Auto-documented structural element.
  */
-function deriveRootFromCodeSources(codeSources) {
-  const abs = codeSources.map(s => s.path.trim()).filter(p => p.startsWith('/'));
-  if (!abs.length) return null;
-  const segs = abs.map(p => p.replace(/\/$/, '').split('/').filter(Boolean));
-  let d = 0;
-  while (d < Math.min(...segs.map(s => s.length)) && segs.every(s => s[d] === segs[0][d])) d++;
-  const common = '/' + segs[0].slice(0, d).join('/');
-  // Single source whose path equals common ancestor → go one level up
-  if (abs.some(p => p.replace(/\/$/, '') === common)) {
-    const up = segs[0].slice(0, Math.max(d - 1, 0));
-    return up.length ? '/' + up.join('/') : '/';
-  }
-  return common || '/';
-}
-
-/**
- * Auto-documented structural element.
- */
-function updateDerivedRoot() {
-  const el = document.getElementById('cfg-derived-root');
-  if (!el) return;
-  const root = deriveRootFromCodeSources(_cfgCodeSources);
-  el.textContent = root ? 'Root: ' + root : '';
-}
-
-/**
- * Auto-documented structural element.
- */
 function renderCodeSourcesList() {
   const el = document.getElementById('cfg-code-sources-list');
   if (!el) return;
@@ -202,7 +174,6 @@ function addCodeSource() {
   else _cfgCodeSources.push(nextSource);
   resetCodeSourceForm();
   renderCodeSourcesList();
-  updateDerivedRoot();
 }
 
 /**
@@ -228,7 +199,6 @@ function removeCodeSource(i) {
   else if (_cfgCodeSourceEditIdx > i) _cfgCodeSourceEditIdx--;
   _cfgCodeSources.splice(i, 1);
   renderCodeSourcesList();
-  updateDerivedRoot();
 }
 
 /**
@@ -341,7 +311,6 @@ function renderProjectConfig() {
   document.getElementById('cfg-vdocs-depth').value = String(_cfgVisualDocs.folderDepth);
   document.getElementById('vdocs-depth-row').style.display = _cfgVisualDocs.structureMode === 'folder' ? '' : 'none';
   renderCodeSourcesList();
-  updateDerivedRoot();
   renderDocSourcesList();
   document.getElementById('cfg-stats').textContent =
     (proj.nodeCount ?? 0) + ' nodes · ' + (proj.edgeCount ?? 0) + ' edges  ·  id: ' + proj.id;
@@ -355,9 +324,6 @@ async function saveProjectConfig() {
   const msg = document.getElementById('cfg-msg');
   const name = document.getElementById('cfg-name').value.trim();
   const code = document.getElementById('cfg-code').value.trim();
-  const rootPath = deriveRootFromCodeSources(_cfgCodeSources)
-    || allProjects.find(p => p.id === currentProject)?.rootPath
-    || '';
   const visualDocs = {
     structureMode: document.getElementById('cfg-vdocs-structure').value,
     folderDepth: Number(document.getElementById('cfg-vdocs-depth').value || 2),
@@ -367,7 +333,7 @@ async function saveProjectConfig() {
     const r = await fetch('/api/projects/' + currentProject, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, code, rootPath, docSources: _cfgDocSources, codeSources: _cfgCodeSources, visualDocs }),
+      body: JSON.stringify({ name, code, docSources: _cfgDocSources, codeSources: _cfgCodeSources, visualDocs }),
     });
     const data = await r.json();
     if (!r.ok) { msg.innerHTML = errHTML(data.error || 'Failed'); return; }

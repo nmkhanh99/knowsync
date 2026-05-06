@@ -6,8 +6,8 @@ import type { KnowSyncConfig } from '../../types/index.js';
 /**
  * Auto-documented structural element.
  */
-export async function runInit(rootPath: string): Promise<void> {
-  const configPath = join(rootPath, 'knowsync.config.json');
+export async function runInit(projectDir: string): Promise<void> {
+  const configPath = join(projectDir, 'knowsync.config.json');
 
   if (existsSync(configPath)) {
     console.log('knowsync.config.json already exists. Skipping init.');
@@ -15,7 +15,6 @@ export async function runInit(rootPath: string): Promise<void> {
   }
 
   const config: KnowSyncConfig = {
-    rootPath: '.',
     include: ['src/**/*', 'lib/**/*'],
     exclude: ['node_modules', 'dist', '*.test.*', '*.spec.*'],
     languages: ['typescript', 'javascript', 'python'],
@@ -32,8 +31,8 @@ export async function runInit(rootPath: string): Promise<void> {
   console.log('Created knowsync.config.json');
 
   // Install git hook
-  const hookDir = join(rootPath, '.git', 'hooks');
-  if (existsSync(join(rootPath, '.git'))) {
+  const hookDir = join(projectDir, '.git', 'hooks');
+  if (existsSync(join(projectDir, '.git'))) {
     await mkdir(hookDir, { recursive: true });
     const hookContent = `#!/bin/sh\nnpx knowsync index --delta\n`;
     const hookPath = join(hookDir, 'post-commit');

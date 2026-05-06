@@ -1,4 +1,4 @@
-# 8. MCP Server — 27 tools
+# 8. MCP Server — 30 tools
 
 **File:** `src/mcp/server.ts` và `src/mcp/tools/`
 
@@ -6,7 +6,7 @@
 
 **SDK:** `@modelcontextprotocol/sdk`
 
-`@startMcpServer` hiện đăng ký **27 tools**. Docs cũ ghi 17 tools là đã lỗi thời.
+`@startMcpServer` hiện đăng ký **30 tools**. Docs cũ ghi 17 tools là đã lỗi thời.
 
 Tài liệu này chi tiết hóa [[doc:./02-2-pipeline-tong-the.md#2-pipeline-tong-the]] ở lớp MCP boundary, và map trực tiếp tới `@startMcpServer`, `@wrap`, `@asyncWrap`, `@buildGraph`, `@getDocSection`, `@getDocVisualization`.
 
@@ -26,8 +26,11 @@ server.tool(name, description, zodSchema, handler)
 | `knowsync_get_impact` | `tools/get-impact.ts` | Impact analysis |
 | `knowsync_get_process_flow` | `tools/get-process-flow.ts` | Call flow trace từ entry point |
 | `knowsync_get_doc_flow_trace` | `tools/get-doc-flow-trace.ts` | Trace flow từ tài liệu xuống linked symbols và CALLS flow trong code |
+| `knowsync_get_graph_stats` | `tools/get-graph-stats.ts` | Baseline counts cho graph, docs, parse rules, parse artifacts và source config |
 | `knowsync_search_graph` | `tools/search-graph.ts` | BM25 full-text search |
 | `knowsync_check_doc_sync` | `tools/check-doc-sync.ts` | Doc sync check |
+| `knowsync_get_project_info` | `server.ts` | Trả về `activeProject` và `availableProjects` trong MCP session |
+| `knowsync_set_active_project` | `tools/set-active-project.ts` + `server.ts` | Chuyển active project theo `projectCode` |
 | `knowsync_get_module_overview` | `tools/get-module-overview.ts` | Module overview |
 | `knowsync_get_doc_section_content` | `tools/get-doc-section.ts` | Nội dung Markdown đầy đủ + slug + trace metadata + `relatedDocs` + `beforeDocs` + `afterDocs` |
 | `knowsync_get_full_context` | `tools/get-full-context.ts` | Rich context: callers + callees + docs + siblings |
@@ -58,8 +61,8 @@ server.tool(name, description, zodSchema, handler)
 
 | Tool | File | Mô tả |
 |------|------|-------|
-| `knowsync_scan_doc_sources` | `tools/scan-doc-sources.ts` | Quét candidate Markdown sources |
-| `knowsync_set_visual_docs_config` | `tools/set-visual-docs-config.ts` | Lưu codeSources, docSources, visualDocs config |
+| `knowsync_scan_doc_sources` | `tools/scan-doc-sources.ts` | Quét candidate Markdown sources từ source paths đã cấu hình |
+| `knowsync_set_visual_docs_config` | `tools/set-visual-docs-config.ts` | Lưu codeSources, docSources, visualDocs config; `path` trong sources nên là absolute path |
 
 ### 5. RuleSet orchestration
 
@@ -76,7 +79,7 @@ server.tool(name, description, zodSchema, handler)
 
 ### Liên kết code quan trọng
 
-- `@startMcpServer` là điểm đăng ký tool
+- `@startMcpServer` là điểm đăng ký tool và quản lý active project context cho MCP multi-project
 - `@provideParseRules`, `@previewParseRules`, `@previewApplyParseRules` là trục parse-rule runtime
 - `@suggestDocLinks`, `@createDocLink`, `@validateLinks` là trục docs-linking
 - `@getDocSection` là tool đọc một DocSection hoàn chỉnh, gồm `relatedDocs` để giữ tương thích cũ và `beforeDocs` / `afterDocs` cho doc-to-doc layering rõ hướng

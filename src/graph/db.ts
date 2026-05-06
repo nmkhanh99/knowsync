@@ -1659,6 +1659,28 @@ export class GraphDB {
   }
 
   /**
+   * Returns a baseline summary of the active project graph and parse-rule runtime state.
+   */
+  getGraphStats(): {
+    symbolCount: number;
+    edgeCount: number;
+    docSectionCount: number;
+    parseRuleCount: number;
+    parseArtifactCount: number;
+    codeSourceCount: number;
+    docSourceCount: number;
+  } {
+    const symbolCount = (this.db.prepare(`SELECT COUNT(*) as n FROM symbols WHERE project_id = ?`).get(this.projectId) as { n: number }).n;
+    const edgeCount = (this.db.prepare(`SELECT COUNT(*) as n FROM edges WHERE project_id = ?`).get(this.projectId) as { n: number }).n;
+    const docSectionCount = (this.db.prepare(`SELECT COUNT(*) as n FROM doc_sections WHERE project_id = ?`).get(this.projectId) as { n: number }).n;
+    const parseRuleCount = (this.db.prepare(`SELECT COUNT(*) as n FROM parse_rules WHERE project_id = ?`).get(this.projectId) as { n: number }).n;
+    const parseArtifactCount = (this.db.prepare(`SELECT COUNT(*) as n FROM parse_artifacts WHERE project_id = ?`).get(this.projectId) as { n: number }).n;
+    const codeSourceCount = (this.getProjectConfig<Array<{ path: string }>>('codeSources') ?? []).length;
+    const docSourceCount = (this.getProjectConfig<Array<{ path: string }>>('docSources') ?? []).length;
+    return { symbolCount, edgeCount, docSectionCount, parseRuleCount, parseArtifactCount, codeSourceCount, docSourceCount };
+  }
+
+  /**
    * Clears out any stale Requirement metadata nodes devoid of SATISFIES or DOCUMENTED_BY edges.
    */
   deleteOrphanRequirements(): number {

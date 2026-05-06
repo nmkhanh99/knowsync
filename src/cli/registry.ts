@@ -9,7 +9,6 @@ export interface RegisteredProject {
   id: string;
   code?: string;
   name: string;
-  rootPath: string;
   docSources: DocSourceConfig[];
   codeSources?: CodeSourceConfig[];
   visualDocs: VisualDocsConfig;
@@ -79,11 +78,18 @@ export function makeProjectId(seed: string): string {
   return createHash('sha1').update(seed).digest('hex').slice(0, 8);
 }
 
+function sourceSignature(docSources?: DocSourceConfig[], codeSources?: CodeSourceConfig[]): string {
+  return JSON.stringify({
+    docSources: (docSources ?? []).map((source) => source.path).sort(),
+    codeSources: (codeSources ?? []).map((source) => source.path).sort(),
+  });
+}
+
 /**
  * KnowSync functional handler. Automatically synced via CLI Validation rule.
  */
 export async function registerProject(
-  rootPath: string,
+  projectDir: string,
   docSources?: DocSourceConfig[],
   visualDocs?: Partial<VisualDocsConfig>,
   nameOverride?: string,
@@ -91,7 +97,11 @@ export async function registerProject(
   code?: string,
 ): Promise<RegisteredProject> {
   const registry = await loadRegistry();
-  const existing = rootPath ? registry.projects.find((p) => p.rootPath === rootPath) : null;
+  const signature = sourceSignature(docSources, codeSources);
+  const existing = registry.projects.find((project) =>
+    (code && project.code === code) ||
+    (signature !== sourceSignature() && sourceSignature(project.docSources, project.codeSources) === signature)
+  );
   if (existing) {
     if (!existing.docSources) existing.docSources = [];
     if (!existing.codeSources) existing.codeSources = [];
@@ -101,13 +111,13 @@ export async function registerProject(
     return existing;
   }
 
-  const seed = rootPath || (nameOverride ?? 'project') + '-' + Date.now();
-  const name = nameOverride || rootPath.split('/').filter(Boolean).pop() || 'project';
+  const firstSourcePath = codeSources?.[0]?.path || docSources?.[0]?.path || '';
+  const seed = code || signature || projectDir || (nameOverride ?? 'project') + '-' + Date.now();
+  const name = nameOverride || code || firstSourcePath.split('/').filter(Boolean).pop() || projectDir.split('/').filter(Boolean).pop() || 'project';
   const project: RegisteredProject = {
     id: makeProjectId(seed),
     code,
     name,
-    rootPath,
     docSources: docSources ?? [],
     codeSources: codeSources ?? [],
     visualDocs: normalizeVisualDocsConfig(visualDocs),
@@ -124,7 +134,7 @@ export async function registerProject(
  */
 export async function updateProject(
   id: string,
-  updates: { name?: string; rootPath?: string; code?: string; docSources?: DocSourceConfig[]; codeSources?: CodeSourceConfig[]; visualDocs?: Partial<VisualDocsConfig> },
+  updates: { name?: string; code?: string; docSources?: DocSourceConfig[]; codeSources?: CodeSourceConfig[]; visualDocs?: Partial<VisualDocsConfig> },
 ): Promise<RegisteredProject | null> {
   const registry = await loadRegistry();
   const idx = registry.projects.findIndex((p) => p.id === id);
@@ -135,11 +145,6 @@ export async function updateProject(
   if (updates.docSources !== undefined) proj.docSources = updates.docSources;
   if (updates.codeSources !== undefined) proj.codeSources = updates.codeSources;
   if (updates.visualDocs !== undefined) proj.visualDocs = normalizeVisualDocsConfig(updates.visualDocs);
-  if (updates.rootPath !== undefined && updates.rootPath !== proj.rootPath) {
-    proj.rootPath = updates.rootPath;
-    proj.id = makeProjectId(updates.rootPath);
-    if (!updates.name) proj.name = updates.rootPath.split('/').filter(Boolean).pop() ?? proj.name;
-  }
   if (!proj.docSources) proj.docSources = [];
   if (!proj.codeSources) proj.codeSources = [];
   proj.visualDocs = normalizeVisualDocsConfig(proj.visualDocs);
@@ -153,7 +158,7 @@ export async function updateProject(
 export async function unregisterProject(id: string): Promise<boolean> {
   const registry = await loadRegistry();
   const before = registry.projects.length;
-  registry.projects = registry.projects.filter((p) => p.id !== id && p.rootPath !== id);
+  registry.projects = registry.projects.filter((p) => p.id !== id);
   if (registry.projects.length === before) return false;
   await saveRegistry(registry);
   return true;

@@ -115,7 +115,6 @@ export interface VisualDocsConfig {
 }
 
 export interface IndexOptions {
-  rootPath: string;
   includeDocs: boolean;
   delta: boolean;
   languages?: string[];
@@ -124,7 +123,6 @@ export interface IndexOptions {
 }
 
 export interface KnowSyncConfig {
-  rootPath: string;
   include: string[];
   exclude: string[];
   languages: string[];

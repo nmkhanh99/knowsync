@@ -7,7 +7,7 @@
 Tài liệu này chi tiết hóa [[doc:./02-2-pipeline-tong-the.md#2-pipeline-tong-the]] và map trực tiếp vào `@crawlRepo`. Quy tắc source boundaries được validate tiếp ở `@validateIndexSources`.
 
 ```
-crawlRepo(rootPath, options?)
+crawlRepo(languages?, docSources?, codeSources?)
   → { codeFiles: CrawledFile[], docFiles: CrawledFile[] }
 ```
 
@@ -41,10 +41,6 @@ codeSources = project.codeSources  (array of { path, label? })
 - Khi `CodeParser` sinh embedded docs từ comment/docstring hoặc injected Markdown, các `DocSection` này chỉ được lưu nếu file gốc nằm trong `docSources`
 - Nói ngắn gọn: `Code Sources` dùng để index code, `Doc Sources` dùng để index tài liệu và tạo doc links
 - Khi giải thích logic này trong code comment hoặc docs khác, link tới `@filterDocSectionsBySources` và `@validateIndexSources`
-
-### Xử lý .gitignore
-
-Dùng thư viện `ignore` để parse file `.gitignore` tại root và áp dụng cho tất cả paths. File trong `.gitignore` không bao giờ được crawl.
 
 ### CrawledFile
 

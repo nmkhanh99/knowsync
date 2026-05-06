@@ -4,7 +4,6 @@ import { existsSync } from 'fs';
 import type { KnowSyncConfig } from '../types/index.js';
 
 const DEFAULTS: KnowSyncConfig = {
-  rootPath: '.',
   include: ['src/**/*'],
   exclude: ['node_modules', 'dist'],
   languages: ['typescript', 'javascript', 'python'],
@@ -19,9 +18,9 @@ const DEFAULTS: KnowSyncConfig = {
 /**
  * KnowSync functional handler. Automatically synced via CLI Validation rule.
  */
-export async function loadConfig(rootPath: string): Promise<KnowSyncConfig> {
-  const configPath = join(rootPath, 'knowsync.config.json');
-  if (!existsSync(configPath)) return { ...DEFAULTS, rootPath };
+export async function loadConfig(projectDir: string): Promise<KnowSyncConfig> {
+  const configPath = join(projectDir, 'knowsync.config.json');
+  if (!existsSync(configPath)) return { ...DEFAULTS };
 
   const raw = await readFile(configPath, 'utf-8');
   const parsed = JSON.parse(raw) as Partial<KnowSyncConfig> & { groupDocsBy?: string };
@@ -43,6 +42,5 @@ export async function loadConfig(rootPath: string): Promise<KnowSyncConfig> {
       ...(parsed.visualDocs ?? {}),
       structureMode,
     },
-    rootPath,
   };
 }

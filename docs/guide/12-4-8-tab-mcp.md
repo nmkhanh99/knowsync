@@ -10,7 +10,12 @@ Hiển thị config JSON để kết nối AI tools với project hiện tại q
 
 Nhấn **Copy** → dán vào file config tương ứng → khởi động lại AI tool.
 
-> CLI tương đương: `knowsync mcp /path/to/project`
+> CLI tương đương: `knowsync mcp`
+
+MCP session hiện hỗ trợ nhiều project trong cùng registry. Agent có thể:
+
+- đọc `knowsync_get_project_info` để biết `activeProject` và `availableProjects`
+- gọi `knowsync_set_active_project(projectCode=...)` để chuyển active project theo code như `mrp`
 
 Sau khi kết nối, nên hướng dẫn agent dùng đúng trace annotation khi sửa docs/code:
 

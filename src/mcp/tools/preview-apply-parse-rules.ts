@@ -58,7 +58,6 @@ interface RefineHistoryEntry {
 export const schema = {
   stateToken: z.string().optional().describe('Continuation token for a refine session. On follow-up calls, you may send only stateToken plus revised rules/queryPacks.'),
   maxRefineRounds: z.number().int().min(1).max(5).optional().describe('Start a server-side refine session and return a state token for up to N follow-up preview/apply rounds'),
-  rootPath: z.string().optional().describe('Absolute project root used for previewing rules before apply'),
   language: z.string().optional().describe('Target language, e.g. "typescript", "python". Must be a supported Tree-sitter grammar for live preview.'),
   mode: z.enum(['preview', 'apply']).optional().describe('Preview only, or preview then persist rules when valid'),
   filePaths: z.array(z.string()).optional().describe('Optional files to preview before apply'),
@@ -86,7 +85,7 @@ export async function previewApplyParseRules(
   args: {
     stateToken?: string;
     maxRefineRounds?: number;
-    rootPath?: string;
+    codeSources?: import('../../types/index.js').CodeSourceConfig[];
     language?: string;
     mode?: 'preview' | 'apply';
     filePaths?: string[];
@@ -109,7 +108,7 @@ export async function previewApplyParseRules(
   }
 
   const resolved = {
-    rootPath: args.rootPath ?? (session?.payload['rootPath'] as string | undefined),
+    codeSources: args.codeSources ?? (session?.payload['codeSources'] as import('../../types/index.js').CodeSourceConfig[] | undefined),
     language: args.language ?? (session?.payload['language'] as string | undefined),
     mode: args.mode ?? (session?.payload['mode'] as 'preview' | 'apply' | undefined) ?? 'preview',
     filePaths: args.filePaths ?? (session?.payload['filePaths'] as string[] | undefined),
@@ -123,12 +122,12 @@ export async function previewApplyParseRules(
     delta: args.delta ?? (session?.payload['delta'] as boolean | undefined),
   };
 
-  if (!resolved.rootPath || !resolved.language) {
-    return { ok: false, error: 'rootPath and language are required unless supplied by stateToken' };
+  if (!resolved.language) {
+    return { ok: false, error: 'Active project context and language are required unless supplied by stateToken' };
   }
 
   const preview = await previewParseRules(db, {
-    rootPath: resolved.rootPath,
+    codeSources: resolved.codeSources,
     language: resolved.language,
     filePaths: resolved.filePaths,
     limit: resolved.limit,
@@ -156,7 +155,7 @@ export async function previewApplyParseRules(
   if (requestedRounds && !args.stateToken) {
     const token = randomUUID();
     db.upsertRefineSession(token, {
-      rootPath: resolved.rootPath,
+      codeSources: resolved.codeSources,
       language: resolved.language,
       mode: resolved.mode,
       filePaths: resolved.filePaths,
@@ -240,7 +239,6 @@ export async function previewApplyParseRules(
 
   const indexSummary = resolved.applyIndex
     ? await buildGraph(db, {
-        rootPath: resolved.rootPath,
         delta: resolved.delta ?? true,
         includeDocs: resolved.includeDocs ?? true,
       })

@@ -61,8 +61,8 @@ KnowSync hiện hỗ trợ nhiều lớp parse runtime hơn bản docs cũ: `rul
 
 ```json
 {
-  "rootPath": "/abs/path/to/repo",
   "language": "typescript",
+  "filePaths": ["/abs/path/to/repo/src/example.ts"],
   "limit": 3,
   "onlyRuleMatches": true,
   "matchDetails": true,

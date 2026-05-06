@@ -5,8 +5,8 @@ import { GraphDB } from '../../graph/db.js';
 /**
  * Auto-documented structural element.
  */
-export async function runValidate(rootPath: string): Promise<void> {
-  const absRoot = resolve(rootPath);
+export async function runValidate(projectDir: string): Promise<void> {
+  const absRoot = resolve(projectDir);
   const entry = await registerProject(absRoot);
 
   const db = new GraphDB(CENTRAL_DB_PATH, entry.id);

@@ -10,10 +10,10 @@ KnowSync hiện dùng ranh giới rõ ràng giữa hai loại source:
 Mỗi entry có dạng:
 
 ```json
-{ "path": "docs", "label": "guides" }
+{ "path": "/abs/path/to/project/docs", "label": "guides" }
 ```
 
-`label` là tùy chọn. `path` là đường dẫn tương đối trong repo (file hoặc thư mục).
+`label` là tùy chọn. `path` nên là absolute path tới file hoặc thư mục nguồn.
 
 ### 3 cách cấu hình docSources
 
@@ -36,11 +36,10 @@ Nhấn **⚙** → tìm phần **Doc Sources** → Add entry (nhập path và la
 {
   "tool": "knowsync_build_graph",
   "args": {
-    "rootPath": "/path/to/myproject",
     "includeDocs": true,
     "docSources": [
-      { "path": "docs" },
-      { "path": "README.md" }
+      { "path": "/abs/path/to/myproject/docs" },
+      { "path": "/abs/path/to/myproject/README.md" }
     ]
   }
 }
@@ -74,10 +73,10 @@ Nhấn **⚙** → tìm phần **Code Sources** → Add entry → **Save**.
   "tool": "knowsync_set_visual_docs_config",
   "args": {
     "codeSources": [
-      { "path": "src", "label": "app" }
+      { "path": "/abs/path/to/myproject/src", "label": "app" }
     ],
     "docSources": [
-      { "path": "docs", "label": "docs" }
+      { "path": "/abs/path/to/myproject/docs", "label": "docs" }
     ]
   }
 }

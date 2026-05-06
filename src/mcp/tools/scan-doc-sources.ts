@@ -5,7 +5,6 @@ import type { GraphDB } from '../../graph/db.js';
 import type { DocSourceConfig } from '../../types/index.js';
 
 export const schema = {
-  rootPath: z.string().describe('Absolute path to the project root to scan'),
   maxDepth: z.number().optional().describe('Max folder depth (default 3)'),
 };
 
@@ -49,9 +48,9 @@ function walkDir(dir: string, root: string, depth: number, maxDepth: number): Di
  * @param args Tool specific schema arguments
  * @returns The queried internal schema nodes or operation results for the Agent
  */
-export function scanDocSources(db: GraphDB, args: { rootPath: string; maxDepth?: number }) {
+export function scanDocSources(db: GraphDB, args: { seedPaths: string[]; maxDepth?: number }) {
   const maxDepth = args.maxDepth ?? 3;
-  const discovered = walkDir(args.rootPath, args.rootPath, 0, maxDepth);
+  const discovered = args.seedPaths.flatMap((seedPath) => walkDir(seedPath, seedPath, 0, maxDepth));
   const currentConfig = db.getProjectConfig<DocSourceConfig[]>('docSources') ?? [];
   return {
     discovered,

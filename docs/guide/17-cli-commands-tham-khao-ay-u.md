@@ -9,7 +9,7 @@
 | `knowsync index [path]` | `--docs`, `--delta`, `--all` | Index code từ `Code Sources`, và docs từ `Doc Sources` khi có `--docs` |
 | `knowsync validate [path]` | — | Tìm symbols thiếu docs |
 | `knowsync viz [path]` | `-p, --port <number>` | Mở Web UI (mặc định port 4242) |
-| `knowsync mcp [path]` | — | Khởi động MCP server (stdio) |
+| `knowsync mcp` | — | Khởi động MCP server (stdio) |
 
 Lưu ý:
 

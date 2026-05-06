@@ -13,7 +13,7 @@ Commander 12. Entry point: `dist/cli/index.js`.
 | `index [path]` | `commands/index-cmd.ts` | Index (--docs, --delta, --all) |
 | `validate [path]` | `commands/validate.ts` | Tìm symbols thiếu docs |
 | `viz [path]` | `commands/viz.ts` | Start viz server (load tất cả từ registry nếu không có path) |
-| `mcp [path]` | `commands/mcp-cmd.ts` | Start MCP server stdio |
+| `mcp` | `commands/mcp-cmd.ts` | Start MCP server stdio |
 
 ### Registry
 
@@ -21,10 +21,8 @@ Commander 12. Entry point: `dist/cli/index.js`.
 
 ```typescript
 interface RegisteredProject {
-  id: string;          // SHA1(rootPath)[0:8] — deterministic, stable
-  name: string;        // basename(rootPath)
-  rootPath: string;
-  dbPath: string;      // rootPath/.knowsync/graph.db
+  id: string;          // stable id derived from code or source signature
+  name: string;
   docSources: Array<{ path: string; label?: string }>;
   codeSources?: Array<{ path: string; label?: string }>;
   registeredAt: number;

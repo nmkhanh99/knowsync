@@ -64,8 +64,6 @@ Trong `src/cli/commands/init.ts`, thêm `'go'` vào mảng `languages` mặc đ�
 
 ```typescript
 const defaultConfig = {
-  rootPath: '.',
-  dbPath: '.knowsync/graph.db',
   include: ['src/**'],
   exclude: ['node_modules', 'dist', '.git'],
   languages: ['typescript', 'javascript', 'python', 'go'],  // ← thêm 'go'

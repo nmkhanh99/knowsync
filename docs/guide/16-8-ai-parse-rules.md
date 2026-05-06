@@ -100,7 +100,7 @@ Ngoài `rules[]`, payload còn có thể có:
 ### Workflow AI Parse Rules
 
 ```
-1. AI gọi knowsync_preview_parse_rules(rootPath="/path/to/project", language="typescript", queryPacks=[...])
+1. AI gọi knowsync_preview_parse_rules(language="typescript", filePaths=["/abs/path/to/project/src/a.ts"], queryPacks=[...])
    → Xem trước `matchDetails`, `queryErrors`, `embeddedDocRegions`
    → Sửa query/rule nếu preview chưa sạch
 
@@ -111,7 +111,7 @@ Ngoài `rules[]`, payload còn có thể có:
 3. AI gọi knowsync_provide_parse_rules(language="typescript", queryPacks=[...], artifacts=[...])
    → Rules và artifacts lưu vào DB với priority/pack metadata
 
-4. AI gọi knowsync_build_graph(rootPath="/path/to/project", delta=false)
+4. AI gọi knowsync_build_graph(delta=false)
    → RulesEngine load rules và artifacts từ DB
    → Parse với cả built-in patterns lẫn AI rules
    → Graph được rebuild

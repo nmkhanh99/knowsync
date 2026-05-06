@@ -4,6 +4,7 @@ import { loadRegistry, registerProject, CENTRAL_DB_PATH } from '../registry.js';
 import { GraphDB } from '../../graph/db.js';
 import { runIndex } from '../../indexer/index.js';
 import type { CodeSourceConfig, DocSourceConfig } from '../../types/index.js';
+import type { RegisteredProject } from '../registry.js';
 
 export interface IndexCommandOptions {
   docs: boolean;
@@ -14,12 +15,12 @@ export interface IndexCommandOptions {
 /**
  * KnowSync functional handler. Automatically synced via CLI Validation rule.
  */
-export async function runIndexCommand(rootPath: string | undefined, opts: IndexCommandOptions): Promise<void> {
+export async function runIndexCommand(projectDir: string | undefined, opts: IndexCommandOptions): Promise<void> {
   if (opts.all) {
     await indexAllProjects(opts);
     return;
   }
-  const absRoot = resolve(rootPath ?? '.');
+  const absRoot = resolve(projectDir ?? '.');
   await indexOne(absRoot, opts);
 }
 
@@ -39,12 +40,23 @@ async function indexOne(absRoot: string, opts: { docs: boolean; delta: boolean }
     entry.codeSources?.length ? entry.codeSources : undefined;
 
   await runIndex(db, {
-    rootPath: absRoot,
     includeDocs: opts.docs,
     delta: opts.delta,
     languages: config.languages,
     codeSources,
     docSources,
+  });
+  db.close();
+}
+
+async function indexRegisteredProject(project: RegisteredProject, opts: { docs: boolean; delta: boolean }): Promise<void> {
+  const db = new GraphDB(CENTRAL_DB_PATH, project.id);
+  await db.init();
+  await runIndex(db, {
+    includeDocs: opts.docs,
+    delta: opts.delta,
+    codeSources: project.codeSources?.length ? project.codeSources : undefined,
+    docSources: project.docSources?.length ? project.docSources : undefined,
   });
   db.close();
 }
@@ -60,8 +72,8 @@ async function indexAllProjects(opts: { docs: boolean; delta: boolean }): Promis
   }
 
   for (const project of registry.projects) {
-    console.log(`\n── ${project.name} (${project.rootPath})`);
-    await indexOne(project.rootPath, opts);
+    console.log(`\n── ${project.name}`);
+    await indexRegisteredProject(project, opts);
   }
   console.log('\nAll projects indexed.');
 }

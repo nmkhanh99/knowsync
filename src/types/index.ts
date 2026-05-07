@@ -172,6 +172,33 @@ export interface DocSyncResult {
   issues: string[];
 }
 
+export interface HealthDashboardSnapshot {
+  symbolCount: number;
+  edgeCount: number;
+  docSectionCount: number;
+  requirementCount: number;
+  documentableSymbolCount: number;
+  undocumentedSymbolCount: number;
+  coveragePct: number;
+  totalLinks: number;
+  staleLinkCount: number;
+  unresolvedMarkCount: number;
+  orphanedMarkCount: number;
+  tracedRequirementCount: number;
+  traceCompletenessPct: number;
+  lastIndexedAt: number | null;
+  freshnessAgeMs: number | null;
+  lastIndexMode?: 'full' | 'delta' | null;
+  lastIndexCodeFiles?: number;
+  lastIndexDocFiles?: number;
+  lastIndexSkipped?: number;
+  lastIndexErrors?: number;
+  lastIndexElapsedMs?: number;
+  prunedFileCount?: number;
+  provenanceConfidencePct: number;
+  driftScore: number;
+}
+
 export interface ParseRule {
   id: string;
   language: string;

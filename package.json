@@ -8,7 +8,7 @@
   },
   "main": "./dist/cli/index.js",
   "scripts": {
-    "build": "tsc && cp -r src/viz/public dist/viz/ && mkdir -p dist/viz/public/vendor && cp node_modules/sigma/build/sigma.min.js dist/viz/public/vendor/ && cp node_modules/graphology/dist/graphology.umd.min.js dist/viz/public/vendor/ && cp node_modules/marked/lib/marked.umd.js dist/viz/public/vendor/ && (cp node_modules/mermaid/dist/mermaid.min.js dist/viz/public/vendor/ 2>/dev/null || (test -f dist/viz/public/vendor/mermaid.min.js || curl -sL https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js -o dist/viz/public/vendor/mermaid.min.js))",
+    "build": "tsc && chmod +x dist/cli/index.js && cp -r src/viz/public dist/viz/ && mkdir -p dist/viz/public/vendor && cp node_modules/sigma/build/sigma.min.js dist/viz/public/vendor/ && cp node_modules/graphology/dist/graphology.umd.min.js dist/viz/public/vendor/ && cp node_modules/marked/lib/marked.umd.js dist/viz/public/vendor/ && (cp node_modules/mermaid/dist/mermaid.min.js dist/viz/public/vendor/ 2>/dev/null || (test -f dist/viz/public/vendor/mermaid.min.js || curl -sL https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js -o dist/viz/public/vendor/mermaid.min.js))",
     "dev": "tsx src/cli/index.ts",
     "clean": "rm -rf dist",
     "typecheck": "tsc --noEmit"

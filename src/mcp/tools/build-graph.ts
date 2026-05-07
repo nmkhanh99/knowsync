@@ -34,6 +34,30 @@ export const schema = {
 /**
  * Auto-documented structural element.
  */
+async function runWithoutStdoutNoise<T>(fn: () => Promise<T>): Promise<T> {
+  const originalConsoleLog = console.log;
+  const originalStdoutWrite = process.stdout.write.bind(process.stdout);
+
+  console.log = (..._args: unknown[]) => {};
+  process.stdout.write = ((...args: Parameters<typeof process.stdout.write>) => {
+    const callback = typeof args[args.length - 1] === 'function'
+      ? args[args.length - 1] as ((error?: Error | null) => void)
+      : null;
+    callback?.(null);
+    return true;
+  }) as typeof process.stdout.write;
+
+  try {
+    return await fn();
+  } finally {
+    console.log = originalConsoleLog;
+    process.stdout.write = originalStdoutWrite;
+  }
+}
+
+/**
+ * Auto-documented structural element.
+ */
 export async function buildGraph(
   db: GraphDB,
   args: {
@@ -64,10 +88,10 @@ export async function buildGraph(
     ? args.docSources
     : (db.getProjectConfig<DocSourceConfig[]>('docSources') ?? args.fallbackDocSources ?? []);
 
-  return runIndex(db, {
+  return runWithoutStdoutNoise(() => runIndex(db, {
     delta: args.delta ?? true,
     includeDocs: args.includeDocs ?? true,
     codeSources: codeSources.length ? codeSources : undefined,
     docSources: docSources.length ? docSources : undefined,
-  });
+  }));
 }

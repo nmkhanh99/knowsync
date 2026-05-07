@@ -195,18 +195,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 }
 ```
 
-## 11. CI integration (GitHub Actions)
-
-```yaml
-- name: Validate docs sync
-  run: |
-    npm install -g knowsync
-    knowsync register . --code src --doc docs
-    knowsync index . --docs
-    knowsync validate .
-```
-
-## 12. End-to-end agent flow
+## 11. End-to-end agent flow
 
 ```text
 1) knowsync_get_module_overview

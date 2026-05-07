@@ -33,10 +33,16 @@ interface EmbeddedDocRegionView {
 }
 
 /**
- * MCP Tool Handler.
+ * MCP Tool Handler for doc-centric architecture surfaces.
  * @param db The GraphDB core reference
  * @param args Tool specific schema arguments
  * @returns The queried internal schema nodes or operation results for the Agent
+ *
+ * @doc:../../../docs/requirements/prd-living-architecture-and-freshness.md#prd-arch-001-c4-architecture-surfaces-va-diagram-export
+ * @doc:../../../docs/requirements/frd-architecture-surfaces-and-freshness.md#frd-func-010-diagram-generation-va-architecture-surface-delivery
+ *
+ * PRD-ARCH-001: C4 architecture surfaces and diagram export.
+ * FRD-FUNC-010: architecture surface delivery from graph data.
  */
 export function getDocVisualization(
   db: GraphDB,

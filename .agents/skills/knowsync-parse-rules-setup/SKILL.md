@@ -1,6 +1,11 @@
 ---
 name: knowsync-parse-rules-setup
-description: Thiết lập, mở rộng, hoặc sửa parse rules cho một project KnowSync theo projectCode bằng MCP-only flow: chọn file mẫu, preview/refine rules theo từng vòng, apply vào RuleSet, rebuild graph, và validate coverage/flow. Use when setting up parse rules for a new project, extending parser coverage for a language/framework, or fixing broken extraction caused by parse rules.
+description: >-
+  Thiết lập, mở rộng, hoặc sửa parse rules cho một project KnowSync theo
+  projectCode bằng MCP-only flow: chọn file mẫu, preview/refine rules theo
+  từng vòng, apply vào RuleSet, rebuild graph, và validate coverage/flow.
+  Use when setting up parse rules for a new project, extending parser coverage
+  for a language/framework, or fixing broken extraction caused by parse rules.
 ---
 
 # KnowSync Parse Rules Setup

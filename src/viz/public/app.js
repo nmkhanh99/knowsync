@@ -15,6 +15,7 @@ const EDGE_COLORS = {
 let currentProject = '';
 let allProjects = [];
 let projectListenerAdded = false;
+let healthLoadedProject = '';
 
 /**
  * Auto-documented structural element.
@@ -24,7 +25,7 @@ async function loadProjects(selectId) {
   const sel = document.getElementById('project-select');
 
   if (!allProjects.length) {
-    sel.innerHTML = '<option value="">No projects — click + to add</option>';
+    sel.innerHTML = '<option value="">Chưa có dự án, bấm + để thêm</option>';
     currentProject = '';
     return;
   }
@@ -41,9 +42,10 @@ async function loadProjects(selectId) {
     sel.addEventListener('change', async () => {
       currentProject = sel.value;
       validateLoaded = false;
+      healthLoadedProject = '';
       resetMcpState();
       resetVdocsState();
-      ['search-results', 'impact-results', 'flow-results', 'module-results', 'validate-results', 'all-links-results', 'forward-refs-results', 'linked-docs-results', 'docsync-results', 'validate-links-results', 'mcp-results']
+      ['health-results', 'search-results', 'impact-results', 'flow-results', 'module-results', 'validate-results', 'all-links-results', 'forward-refs-results', 'linked-docs-results', 'docsync-results', 'validate-links-results', 'mcp-results']
         .forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = ''; });
       resetParseRulesState();
       resetRuleSetsState();
@@ -83,7 +85,7 @@ async function doAddProject() {
   const name = document.getElementById('add-project-name').value.trim();
   const msg = document.getElementById('add-project-msg');
   if (!name) return;
-  msg.innerHTML = loading('Adding…');
+  msg.innerHTML = loading('Đang thêm…');
   try {
     const r = await fetch('/api/projects', {
       method: 'POST',
@@ -91,7 +93,7 @@ async function doAddProject() {
       body: JSON.stringify({ name }),
     });
     const data = await r.json();
-    if (!r.ok) { msg.innerHTML = errHTML(data.error || 'Failed'); return; }
+    if (!r.ok) { msg.innerHTML = errHTML(data.error || 'Thất bại'); return; }
     cancelAddProject();
     await loadProjects(data.id);
     await reloadGraph();
@@ -138,13 +140,13 @@ let _cfgCodeSourceEditIdx = -1;
 function renderCodeSourcesList() {
   const el = document.getElementById('cfg-code-sources-list');
   if (!el) return;
-  if (!_cfgCodeSources.length) { el.innerHTML = '<div style="font-size:11px;color:var(--text2);padding:2px 0">No code sources — code indexing will be skipped.</div>'; return; }
+  if (!_cfgCodeSources.length) { el.innerHTML = '<div style="font-size:11px;color:var(--text2);padding:2px 0">Chưa có nguồn code, sẽ bỏ qua lập chỉ mục code.</div>'; return; }
   el.innerHTML = _cfgCodeSources.map((s, i) =>
     '<div class="doc-source-tag">' +
     '<span class="doc-source-path">' + esc(s.path) + '</span>' +
     (s.label ? '<span class="doc-source-label">' + esc(s.label) + '</span>' : '') +
-    '<button class="doc-source-rm" onclick="editCodeSource(' + i + ')" title="Edit" style="color:var(--accent)">✎</button>' +
-    '<button class="doc-source-rm" onclick="removeCodeSource(' + i + ')" title="Remove">×</button>' +
+    '<button class="doc-source-rm" onclick="editCodeSource(' + i + ')" title="Sửa" style="color:var(--accent)">✎</button>' +
+    '<button class="doc-source-rm" onclick="removeCodeSource(' + i + ')" title="Xóa">×</button>' +
     '</div>'
   ).join('');
 }
@@ -207,7 +209,7 @@ function removeCodeSource(i) {
 function renderDocSourcesList() {
   const el = document.getElementById('cfg-doc-sources-list');
   if (!el) return;
-  if (!_cfgDocSources.length) { el.innerHTML = '<div style="font-size:11px;color:var(--text2);padding:2px 0">No doc sources — doc indexing will be skipped.</div>'; return; }
+  if (!_cfgDocSources.length) { el.innerHTML = '<div style="font-size:11px;color:var(--text2);padding:2px 0">Chưa có nguồn tài liệu, sẽ bỏ qua lập chỉ mục tài liệu.</div>'; return; }
   el.innerHTML = _cfgDocSources.map((s, i) => {
     const colorDot = s.color ? '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + esc(s.color) + ';margin-right:3px;flex-shrink:0"></span>' : '';
     const orderBadge = s.order != null ? '<span class="doc-source-label" style="min-width:18px;text-align:center">' + esc(String(s.order)) + '</span>' : '';
@@ -219,8 +221,8 @@ function renderDocSourcesList() {
       '<span class="doc-source-path">' + esc(s.path) + '</span>' +
       (s.label ? '<span class="doc-source-label">' + esc(s.label) + '</span>' : '') +
       orderBadge + excludeBadge +
-      '<button class="doc-source-rm" onclick="editDocSource(' + i + ')" title="Edit" style="color:var(--accent)">✎</button>' +
-      '<button class="doc-source-rm" onclick="removeDocSource(' + i + ')" title="Remove">×</button>' +
+      '<button class="doc-source-rm" onclick="editDocSource(' + i + ')" title="Sửa" style="color:var(--accent)">✎</button>' +
+      '<button class="doc-source-rm" onclick="removeDocSource(' + i + ')" title="Xóa">×</button>' +
       '</div>';
   }).join('');
 }
@@ -336,8 +338,8 @@ async function saveProjectConfig() {
       body: JSON.stringify({ name, code, docSources: _cfgDocSources, codeSources: _cfgCodeSources, visualDocs }),
     });
     const data = await r.json();
-    if (!r.ok) { msg.innerHTML = errHTML(data.error || 'Failed'); return; }
-    msg.innerHTML = '<div class="success-box" style="margin-top:4px;padding:6px 10px">Saved</div>';
+    if (!r.ok) { msg.innerHTML = errHTML(data.error || 'Thất bại'); return; }
+    msg.innerHTML = '<div class="success-box" style="margin-top:4px;padding:6px 10px">Đã lưu</div>';
     await loadProjects(data.id);
     resetVdocsState({ clearUi: false });
     await reloadGraph();
@@ -350,10 +352,10 @@ async function saveProjectConfig() {
 async function doRemoveProject() {
   if (!currentProject) return;
   const proj = allProjects.find(p => p.id === currentProject);
-  if (!confirm('Remove "' + (proj?.name ?? currentProject) + '" from registry?')) return;
+  if (!confirm('Gỡ "' + (proj?.name ?? currentProject) + '" khỏi registry?')) return;
   try {
     const r = await fetch('/api/projects/' + currentProject, { method: 'DELETE' });
-    if (!r.ok) { alert('Failed to remove project'); return; }
+    if (!r.ok) { alert('Gỡ dự án thất bại'); return; }
     switchTab('graph');
     await loadProjects();
     await reloadGraph();
@@ -367,10 +369,10 @@ function getIndexWarnings(project, includeDocs) {
   const warnings = [];
   if (!project) return ['No project selected.'];
   if (!Array.isArray(project.codeSources) || project.codeSources.length === 0) {
-    warnings.push('No Code Sources configured: code indexing will be skipped.');
+    warnings.push('Chưa cấu hình nguồn code: sẽ bỏ qua lập chỉ mục code.');
   }
   if (includeDocs && (!Array.isArray(project.docSources) || project.docSources.length === 0)) {
-    warnings.push('No Doc Sources configured: doc indexing will be skipped.');
+    warnings.push('Chưa cấu hình nguồn tài liệu: sẽ bỏ qua lập chỉ mục tài liệu.');
   }
   return warnings;
 }
@@ -380,6 +382,25 @@ function getIndexWarnings(project, includeDocs) {
  */
 function formatIndexWarnings(projectName, warnings) {
   return projectName + '\n\n' + warnings.map(w => '• ' + w).join('\n');
+}
+
+function setIndexRunNote(text, tone) {
+  const el = document.getElementById('index-run-note');
+  if (!el) return;
+  el.textContent = text || '';
+  el.style.color = tone === 'error'
+    ? 'var(--red)'
+    : tone === 'success'
+      ? 'var(--green)'
+      : 'var(--text2)';
+}
+
+function formatIndexSummary(summary) {
+  const totalFiles = Number(summary.codeFiles || 0) + Number(summary.docFiles || 0);
+  const skipped = Number(summary.skipped || 0);
+  const parsed = Math.max(0, totalFiles - skipped);
+  const elapsed = formatDuration(Number(summary.elapsedMs || 0));
+  return `${String(summary.mode || 'full').toUpperCase()} · ${parsed}/${totalFiles} đã parse · ${skipped} bỏ qua · ${Number(summary.prunedFiles || 0)} đã prune · ${Number(summary.errors || 0)} lỗi · ${elapsed}`;
 }
 
 // ── Index ─────────────────────────────────────────────────────────────────
@@ -395,15 +416,24 @@ async function doIndex() {
   }
   btn.innerHTML = '<div class="spinner" style="width:12px;height:12px;border-width:1.5px;margin:0"></div> Indexing…';
   btn.disabled = true;
+  setIndexRunNote('Indexing…', 'neutral');
   try {
     const r = await fetch('/api/index?project=' + currentProject + (delta ? '&delta=true' : ''), { method: 'POST' });
     const data = await r.json();
-    if (!r.ok) { alert('Index failed: ' + (data.error || 'Unknown error')); return; }
+    if (!r.ok) {
+      setIndexRunNote('Lập chỉ mục thất bại: ' + (data.error || 'Lỗi không rõ'), 'error');
+      alert('Lập chỉ mục thất bại: ' + (data.error || 'Lỗi không rõ'));
+      return;
+    }
     document.getElementById('stat-nodes').textContent = data.nodes;
     document.getElementById('stat-edges').textContent = data.edges;
     document.getElementById('stat-clusters').textContent = data.clusters;
     await reloadGraph();
-  } catch (e) { alert(String(e)); }
+    setIndexRunNote(formatIndexSummary(data), data.errors ? 'error' : 'success');
+  } catch (e) {
+    setIndexRunNote('Lập chỉ mục thất bại: ' + String(e), 'error');
+    alert(String(e));
+  }
   finally { btn.innerHTML = '⟳ Index'; btn.disabled = false; }
 }
 
@@ -427,12 +457,34 @@ async function doIndexAll() {
   btnIndex.disabled = true;
   btnIndexAll.disabled = true;
   btnIndexAll.textContent = '…';
+  setIndexRunNote('Indexing all projects…', 'neutral');
   try {
     const r = await fetch('/api/index-all' + (delta ? '?delta=true' : ''), { method: 'POST' });
     const data = await r.json();
-    if (!r.ok) { alert('Index All failed: ' + (data.error || 'Unknown error')); return; }
+    if (!r.ok) {
+      setIndexRunNote('Lập chỉ mục toàn bộ thất bại: ' + (data.error || 'Lỗi không rõ'), 'error');
+      alert('Lập chỉ mục toàn bộ thất bại: ' + (data.error || 'Lỗi không rõ'));
+      return;
+    }
     await reloadGraph();
-  } catch (e) { alert(String(e)); }
+    const total = Array.isArray(data) ? data.reduce((acc, item) => {
+      const summary = item.summary || {};
+      acc.projects += 1;
+      acc.codeFiles += Number(summary.codeFiles || 0);
+      acc.docFiles += Number(summary.docFiles || 0);
+      acc.skipped += Number(summary.skipped || 0);
+      acc.prunedFiles += Number(summary.prunedFiles || 0);
+      acc.errors += Number(summary.errors || 0);
+      acc.elapsedMs += Number(summary.elapsedMs || 0);
+      return acc;
+    }, { projects: 0, codeFiles: 0, docFiles: 0, skipped: 0, prunedFiles: 0, errors: 0, elapsedMs: 0, mode: delta ? 'delta' : 'full' }) : null;
+    if (total) {
+      setIndexRunNote(`${total.projects} dự án · ${formatIndexSummary(total)}`, total.errors ? 'error' : 'success');
+    }
+  } catch (e) {
+    setIndexRunNote('Lập chỉ mục toàn bộ thất bại: ' + String(e), 'error');
+    alert(String(e));
+  }
   finally {
     btnIndex.disabled = false;
     btnIndexAll.disabled = false;
@@ -469,6 +521,7 @@ function switchTab(name) {
   document.getElementById('tab-' + name).classList.add('active');
   const navBtn = document.querySelector('[data-tab="' + name + '"]');
   if (navBtn) navBtn.classList.add('active');
+  if (name === 'health' && healthLoadedProject !== currentProject) loadHealthDashboard();
   if (name === 'docs') {
     loadMarksBanner();
     switchDocsTab(currentDocsTab); // restore last active sub-tab
@@ -476,6 +529,12 @@ function switchTab(name) {
   if (name === 'vdocs' && !vdocsData) loadDocGraph();
   if (name === 'mcp' && !mcpData) loadMcpConfig();
   if (name === 'rules') loadRuleSets();
+  if (name === 'flow') {
+    const flowResults = document.getElementById('flow-results');
+    if (flowResults && !flowResults.innerHTML.trim()) {
+      flowResults.innerHTML = empty('Nhập một entry point code hoặc heading của section tài liệu, rồi bấm `Truy dấu`.');
+    }
+  }
   if (name === 'graph' && sigmaRenderer) sigmaRenderer.refresh();
 }
 
@@ -496,6 +555,117 @@ async function api(path) {
     console.error('API error', path, e);
     return null;
   }
+}
+
+function formatRelativeAge(ms) {
+  if (ms == null) return 'Not indexed yet';
+  const minutes = Math.round(ms / 60000);
+  if (minutes < 1) return 'just now';
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 48) return `${hours}h ago`;
+  const days = Math.round(hours / 24);
+  return `${days}d ago`;
+}
+
+function formatTimestamp(ts) {
+  if (!ts) return 'Not indexed yet';
+  return new Date(ts).toLocaleString('vi-VN', { dateStyle: 'medium', timeStyle: 'short' });
+}
+
+function formatDuration(ms) {
+  if (!ms && ms !== 0) return 'n/a';
+  if (ms < 1000) return `${ms}ms`;
+  const seconds = Math.round(ms / 100) / 10;
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  const remSeconds = Math.round((seconds % 60) * 10) / 10;
+  return `${minutes}m ${remSeconds}s`;
+}
+
+function toneClassForPct(value, inverted) {
+  const score = Number(value || 0);
+  if (inverted) {
+    if (score <= 15) return 'good';
+    if (score <= 40) return 'warn';
+    return 'bad';
+  }
+  if (score >= 85) return 'good';
+  if (score >= 60) return 'warn';
+  return 'bad';
+}
+
+async function loadHealthDashboard() {
+  const el = document.getElementById('health-results');
+  if (!el) return;
+  el.innerHTML = loading('Building knowledge health snapshot…');
+  const data = await api('/api/health-dashboard');
+  if (!data) { el.innerHTML = errHTML('Tải dashboard sức khỏe thất bại'); return; }
+  healthLoadedProject = currentProject;
+
+  const coverageTone = toneClassForPct(data.coveragePct, false);
+  const traceTone = toneClassForPct(data.traceCompletenessPct, false);
+  const provenanceTone = toneClassForPct(data.provenanceConfidencePct, false);
+  const driftTone = toneClassForPct(data.driftScore, true);
+
+  const metrics = [
+    { label: 'Coverage', value: `${data.coveragePct}%`, tone: coverageTone, meta: `${data.undocumentedSymbolCount} undocumented / ${data.documentableSymbolCount} documentable` },
+    { label: 'Trace Completeness', value: `${data.traceCompletenessPct}%`, tone: traceTone, meta: `${data.tracedRequirementCount} traced / ${data.requirementCount} requirements` },
+    { label: 'Provenance Confidence', value: `${data.provenanceConfidencePct}%`, tone: provenanceTone, meta: `${data.staleLinkCount} stale / ${data.totalLinks} doc links` },
+    { label: 'Drift Score', value: `${data.driftScore}`, tone: driftTone, meta: '0 = healthier, 100 = driftier' },
+    { label: 'Mark mồ côi', value: `${data.orphanedMarkCount}`, tone: data.orphanedMarkCount === 0 ? 'good' : 'warn', meta: `${data.unresolvedMarkCount} mark liên kết UI chưa xử lý` },
+    { label: 'Độ mới dữ liệu', value: formatRelativeAge(data.freshnessAgeMs), tone: data.freshnessAgeMs != null && data.freshnessAgeMs < 86400000 ? 'good' : 'warn', meta: formatTimestamp(data.lastIndexedAt) },
+    { label: 'Lần index gần nhất', value: (data.lastIndexMode || 'unknown').toUpperCase(), tone: 'good', meta: `${data.prunedFileCount || 0} file stale đã prune` },
+  ];
+
+  let html = '<div class="health-grid">' + metrics.map((metric) =>
+    '<div class="health-card ' + metric.tone + '">' +
+      '<div class="health-label">' + esc(metric.label) + '</div>' +
+      '<div class="health-value">' + esc(metric.value) + '</div>' +
+      '<div class="health-meta">' + esc(metric.meta) + '</div>' +
+    '</div>'
+  ).join('') + '</div>';
+
+  html += '<div class="health-details">' +
+    '<div class="health-detail-card">' +
+      '<div class="section-title">Graph Footprint</div>' +
+      '<div class="health-list">' +
+        '<div><strong>' + data.symbolCount + '</strong> symbols</div>' +
+        '<div><strong>' + data.edgeCount + '</strong> edges</div>' +
+        '<div><strong>' + data.docSectionCount + '</strong> doc sections</div>' +
+        '<div><strong>' + data.requirementCount + '</strong> requirements</div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="health-detail-card">' +
+      '<div class="section-title">Operational Notes</div>' +
+      '<div class="health-list">' +
+        '<div>Làm mới tab này sau khi index để cập nhật độ phủ và độ lệch.</div>' +
+        '<div>Coverage only counts Functions, Classes, and Methods without docstring or linked docs.</div>' +
+        '<div>Trace completeness counts requirements with at least one `SATISFIES` code link.</div>' +
+        '<div>Orphaned marks are unresolved UI marks whose target doc or symbol no longer exists.</div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="health-detail-card">' +
+      '<div class="section-title">Tín hiệu độ mới</div>' +
+      '<div class="health-list">' +
+        '<div><strong>Last indexed at:</strong> ' + esc(formatTimestamp(data.lastIndexedAt)) + '</div>' +
+        '<div><strong>Index mode:</strong> ' + esc((data.lastIndexMode || 'unknown').toUpperCase()) + '</div>' +
+        '<div><strong>Pruned stale files:</strong> ' + esc(String(data.prunedFileCount || 0)) + '</div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="health-detail-card">' +
+      '<div class="section-title">Lần chạy index gần nhất</div>' +
+      '<div class="health-list">' +
+        '<div><strong>Code files:</strong> ' + esc(String(data.lastIndexCodeFiles || 0)) + '</div>' +
+        '<div><strong>Doc files:</strong> ' + esc(String(data.lastIndexDocFiles || 0)) + '</div>' +
+        '<div><strong>Skipped:</strong> ' + esc(String(data.lastIndexSkipped || 0)) + '</div>' +
+        '<div><strong>Errors:</strong> ' + esc(String(data.lastIndexErrors || 0)) + '</div>' +
+        '<div><strong>Elapsed:</strong> ' + esc(formatDuration(data.lastIndexElapsedMs || 0)) + '</div>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+
+  el.innerHTML = html;
 }
 
 // ── Rendering helpers ─────────────────────────────────────────────────────
@@ -526,7 +696,7 @@ function copySymbolAnnotation(symbolName, format, btn) {
   navigator.clipboard.writeText(text).then(() => {
     if (!btn) return;
     const prev = btn.textContent;
-    btn.textContent = 'Copied';
+    btn.textContent = 'Đã chép';
     setTimeout(() => { btn.textContent = prev; }, 900);
   }).catch(() => {});
 }
@@ -557,13 +727,13 @@ function docCard(d, symbolName) {
   }
   const anchor = d.slug ? ' <span style="font-family:monospace;font-size:10px;color:var(--text2)">#' + esc(d.slug) + '</span>' : '';
   const actions = renderSymbolCopyActions(symbolName);
-  const traceQuery = ('doc:' + String(d.id || '')).replace(/'/g, "\\'");
+  const traceQuery = String(d.id || '').replace(/'/g, "\\'");
   return '<div class="doc-card">' +
     '<div style="display:flex;align-items:flex-start;gap:8px;justify-content:space-between">' +
     '<div><div class="doc-heading">' + esc(d.heading) + anchor + '</div>' +
     '<div class="doc-file">' + esc(shortPath(d.filePath)) + ':' + d.startLine + '</div></div>' +
     '<div style="display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end">' +
-      '<button class="btn-secondary" style="padding:2px 8px;font-size:10px" onclick=\'gotoDocFlow("' + traceQuery + '")\'>Trace Flow</button>' +
+      '<button class="btn-secondary" style="padding:2px 8px;font-size:10px" onclick=\'gotoDocFlow("' + traceQuery + '")\'>Truy dấu luồng</button>' +
       actions +
     '</div>' +
     '</div>' +
@@ -584,7 +754,7 @@ function linkedDocCard(d, symbolId, symbolName) {
   }
   const anchor = d.slug ? ' <span style="font-family:monospace;font-size:10px;color:var(--text2)">#' + esc(d.slug) + '</span>' : '';
   const copyBtns = renderSymbolCopyActions(symbolName);
-  const traceQuery = ('doc:' + String(d.id || '')).replace(/'/g, "\\'");
+  const traceQuery = String(d.id || '').replace(/'/g, "\\'");
   const unlinkBtn = symbolId
     ? '<button class="unlink-btn" data-doc-id="' + esc(d.id) + '" data-sym-id="' + esc(symbolId) + '" onclick="doUnlink(this.dataset.docId,this.dataset.symId,this)">Unlink</button>'
     : '';
@@ -593,7 +763,7 @@ function linkedDocCard(d, symbolId, symbolName) {
     '<div><div class="doc-heading">' + esc(d.heading) + anchor + '</div>' +
     '<div class="doc-file">' + esc(shortPath(d.filePath)) + ':' + d.startLine + '</div></div>' +
     '<div style="display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end">' +
-      '<button class="btn-secondary" style="padding:2px 8px;font-size:10px" onclick=\'gotoDocFlow("' + traceQuery + '")\'>Trace Flow</button>' +
+      '<button class="btn-secondary" style="padding:2px 8px;font-size:10px" onclick=\'gotoDocFlow("' + traceQuery + '")\'>Truy dấu luồng</button>' +
       copyBtns + unlinkBtn +
     '</div>' +
     '</div>' +
@@ -646,7 +816,7 @@ function enc(s) { return encodeURIComponent(s); }
  * Auto-documented structural element.
  */
 function loading(msg) {
-  return '<div class="loading-state"><div class="spinner"></div><span>' + (msg || 'Loading…') + '</span></div>';
+  return '<div class="loading-state"><div class="spinner"></div><span>' + (msg || 'Đang tải…') + '</span></div>';
 }
 
 /**
@@ -776,17 +946,17 @@ function buildLegend() {
 function showGraphPanel(attrs, graph) {
   document.getElementById('panel-name').textContent = attrs.label;
   document.getElementById('panel-content').innerHTML =
-    '<div class="panel-row"><span class="pl">Type</span><span class="pv">' + badge(attrs.nodeType) + '</span></div>' +
+    '<div class="panel-row"><span class="pl">Loại</span><span class="pv">' + badge(attrs.nodeType) + '</span></div>' +
     '<div class="panel-row"><span class="pl">File</span><span class="pv pv-file">' + esc(shortPath(attrs.file)) + '</span></div>' +
-    '<div class="panel-row"><span class="pl">Lines</span><span class="pv">' + attrs.startLine + '–' + attrs.endLine + '</span></div>' +
-    (attrs.cluster ? '<div class="panel-row"><span class="pl">Cluster</span><span class="pv">' + esc(attrs.cluster) + '</span></div>' : '') +
+    '<div class="panel-row"><span class="pl">Dòng</span><span class="pv">' + attrs.startLine + '–' + attrs.endLine + '</span></div>' +
+    (attrs.cluster ? '<div class="panel-row"><span class="pl">Cụm</span><span class="pv">' + esc(attrs.cluster) + '</span></div>' : '') +
     (attrs.signature ? '<div class="panel-sig"><code>' + esc(attrs.signature) + '</code></div>' : '') +
     (attrs.docString ? '<div class="panel-doc">' + esc(attrs.docString.slice(0, 200)) + '</div>' : '') +
     '<div class="panel-actions">' +
-    '<button class="btn-sm btn-blue" onclick="gotoImpact(\'' + esc(attrs.label) + '\')">⚑ Impact</button>' +
-    '<button class="btn-sm btn-purple" onclick="gotoFlow(\'' + esc(attrs.label) + '\')">⟶ Flow</button>' +
+    '<button class="btn-sm btn-blue" onclick="gotoImpact(\'' + esc(attrs.label) + '\')">⚑ Ảnh hưởng</button>' +
+    '<button class="btn-sm btn-purple" onclick="gotoFlow(\'' + esc(attrs.label) + '\')">⟶ Luồng</button>' +
     '</div>' +
-    '<div class="panel-section-title">Callers <span id="callers-loading" style="font-weight:normal;text-transform:none">…</span></div>' +
+    '<div class="panel-section-title">Bên gọi <span id="callers-loading" style="font-weight:normal;text-transform:none">…</span></div>' +
     '<div id="panel-callers"></div>';
 
   document.getElementById('graph-panel').classList.add('open');
@@ -795,26 +965,26 @@ function showGraphPanel(attrs, graph) {
     const cl = document.getElementById('panel-callers');
     const ll = document.getElementById('callers-loading');
     if (!cl) return;
-    if (!data) { if (ll) ll.textContent = ''; cl.innerHTML = empty('Not found'); return; }
+    if (!data) { if (ll) ll.textContent = ''; cl.innerHTML = empty('Không tìm thấy'); return; }
 
     if (ll) ll.textContent = '(' + data.callers.length + ')';
     cl.innerHTML = data.callers.length
       ? data.callers.slice(0, 6).map(c => '<div class="mini-card">' + badge(c.type) + ' ' + esc(c.name) + '</div>').join('')
-      : '<div style="font-size:12px;color:var(--text2);padding:4px 0">None</div>';
+      : '<div style="font-size:12px;color:var(--text2);padding:4px 0">Không có</div>';
 
     const pc = document.getElementById('panel-content');
     if (!pc) return;
 
     if (data.callees.length) {
       const sec = document.createElement('div');
-      sec.innerHTML = '<div class="panel-section-title">Callees (' + data.callees.length + ')</div>' +
+      sec.innerHTML = '<div class="panel-section-title">Bên được gọi (' + data.callees.length + ')</div>' +
         data.callees.slice(0, 6).map(c => '<div class="mini-card">' + badge(c.type) + ' ' + esc(c.name) + '</div>').join('');
       pc.appendChild(sec);
     }
 
     if (data.linkedDocs && data.linkedDocs.length) {
       const sec = document.createElement('div');
-      sec.innerHTML = '<div class="panel-section-title">Docs (' + data.linkedDocs.length + ')</div>' +
+      sec.innerHTML = '<div class="panel-section-title">Tài liệu (' + data.linkedDocs.length + ')</div>' +
         data.linkedDocs.slice(0, 3).map(d =>
           '<div class="mini-card" style="flex-direction:column;align-items:flex-start;gap:2px">' +
           '<span style="font-weight:500;font-size:11px">' + esc(d.heading) + '</span>' +
@@ -861,7 +1031,7 @@ function gotoDocFlow(docQuery) {
   switchTab('flow');
   document.getElementById('flow-mode').value = 'doc';
   document.getElementById('flow-entry').value = clean;
-  document.getElementById('flow-entry').placeholder = 'Doc heading, keyword, hoặc doc:<id>...';
+  document.getElementById('flow-entry').placeholder = 'Heading tài liệu, từ khóa, hoặc ID của section...';
   doFlow();
 }
 
@@ -905,12 +1075,12 @@ async function openSymPopup(symId, symName) {
   const body = document.getElementById('sym-popup-body');
   const title = document.getElementById('sym-popup-title');
   title.textContent = symName || symId;
-  body.innerHTML = '<div style="color:var(--text2);font-size:12px;padding:20px 0;text-align:center">Loading…</div>';
+  body.innerHTML = '<div style="color:var(--text2);font-size:12px;padding:20px 0;text-align:center">Đang tải…</div>';
   overlay.style.display = 'flex';
 
   const data = await api('/api/symbol-by-id?id=' + enc(symId));
   if (!data || !data.symbol) {
-    body.innerHTML = '<div style="color:var(--red);font-size:12px;padding:12px 0">Symbol not found (may have been re-indexed)</div>';
+    body.innerHTML = '<div style="color:var(--red);font-size:12px;padding:12px 0">Không tìm thấy symbol (có thể đã được index lại)</div>';
     return;
   }
   const s = data.symbol;
@@ -928,27 +1098,27 @@ async function openSymPopup(symId, symName) {
 
   // Callers
   if (data.callers && data.callers.length) {
-    html += '<div class="sym-popup-section"><div class="sym-popup-section-title">Callers (' + data.callers.length + ')</div>';
+    html += '<div class="sym-popup-section"><div class="sym-popup-section-title">Bên gọi (' + data.callers.length + ')</div>';
     html += data.callers.slice(0, 8).map(c =>
       '<div class="sym-popup-caller">' + badge(c.type) + ' <span style="font-family:monospace">' + esc(c.name) + '</span><span class="sym-popup-file">' + esc(shortPath(c.filePath || '')) + '</span></div>'
     ).join('');
-    if (data.callers.length > 8) html += '<div style="font-size:10px;color:var(--text2);padding:3px 0">…and ' + (data.callers.length - 8) + ' more</div>';
+    if (data.callers.length > 8) html += '<div style="font-size:10px;color:var(--text2);padding:3px 0">…và thêm ' + (data.callers.length - 8) + '</div>';
     html += '</div>';
   }
 
   // Callees
   if (data.callees && data.callees.length) {
-    html += '<div class="sym-popup-section"><div class="sym-popup-section-title">Calls (' + data.callees.length + ')</div>';
+    html += '<div class="sym-popup-section"><div class="sym-popup-section-title">Lời gọi (' + data.callees.length + ')</div>';
     html += data.callees.slice(0, 8).map(c =>
       '<div class="sym-popup-caller">' + badge(c.type) + ' <span style="font-family:monospace">' + esc(c.name) + '</span><span class="sym-popup-file">' + esc(shortPath(c.filePath || '')) + '</span></div>'
     ).join('');
-    if (data.callees.length > 8) html += '<div style="font-size:10px;color:var(--text2);padding:3px 0">…and ' + (data.callees.length - 8) + ' more</div>';
+    if (data.callees.length > 8) html += '<div style="font-size:10px;color:var(--text2);padding:3px 0">…và thêm ' + (data.callees.length - 8) + '</div>';
     html += '</div>';
   }
 
   // Linked docs
   if (data.linkedDocs && data.linkedDocs.length) {
-    html += '<div class="sym-popup-section"><div class="sym-popup-section-title">Linked Docs (' + data.linkedDocs.length + ')</div>';
+    html += '<div class="sym-popup-section"><div class="sym-popup-section-title">Tài liệu liên kết (' + data.linkedDocs.length + ')</div>';
     html += data.linkedDocs.map(d =>
       '<div class="sym-popup-doc"><span style="color:var(--text)">' + esc(d.heading) + '</span>' +
       '<span class="sym-popup-file" style="margin-left:6px">' + esc(shortPath(d.filePath || '')) + ':' + (d.startLine || '') + '</span></div>'

@@ -18,7 +18,16 @@
     }
     if (currentProject) query.push('project=' + currentProject);
     if (includeCodeContext) query.push('includeCodeContext=1');
-    vdocsLinksData = await fetch('/api/doc-neighborhood?' + query.join('&')).then(r => r.json()).catch(() => null);
+    try {
+      const response = await fetch('/api/doc-neighborhood?' + query.join('&'));
+      const data = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(data?.error || ('HTTP ' + response.status));
+      if (!data || !Array.isArray(data.nodes)) throw new Error('Dữ liệu lân cận tài liệu không hợp lệ');
+      vdocsLinksData = data;
+    } catch (error) {
+      console.error('loadDocNeighborhood failed', error);
+      vdocsLinksData = { error: error instanceof Error ? error.message : 'Yêu cầu lân cận tài liệu thất bại', nodes: [], edges: [] };
+    }
   }
 
   /**
@@ -29,9 +38,14 @@
     const stats = document.getElementById('vdocs-stats');
     if (vdocsRenderer) { vdocsRenderer.kill(); vdocsRenderer = null; }
     el.innerHTML = '';
+    if (data?.error) {
+      el.innerHTML = errHTML(data.error);
+      stats.textContent = 'lỗi';
+      return;
+    }
     if (!data || !data.nodes || !data.nodes.length) {
-      el.innerHTML = '<div class="vdocs-links-empty"><div style="font-size:30px">↔</div><div>Select a DocSection in Outline to inspect links.</div></div>';
-      stats.textContent = 'links · 0 symbols · 0 edges';
+      el.innerHTML = '<div class="vdocs-links-empty"><div style="font-size:30px">↔</div><div>Chọn một DocSection ở Dàn ý để xem liên kết.</div></div>';
+      stats.textContent = 'liên kết · 0 symbol · 0 cạnh';
       return;
     }
 
@@ -77,7 +91,7 @@
       const angle = (-Math.PI / 2) + (Math.PI * 2 * index) / Math.max(childDocNodes.length, 1);
       const isBefore = beforeDocIds.has(node.id);
       const isAfter = afterDocIds.has(node.id);
-      const relationLabel = isBefore && isAfter ? 'Before/After' : isBefore ? 'Before' : isAfter ? 'After' : '';
+      const relationLabel = isBefore && isAfter ? 'Trước/Sau' : isBefore ? 'Trước' : isAfter ? 'Sau' : '';
       const labelPrefix = relationLabel ? relationLabel + ' · ' : '';
       g.addNode(node.id, {
         label: '📝 ' + labelPrefix + node.label,
@@ -128,7 +142,7 @@
     vdocsRenderer.on('clickNode', ({ node }) => handleVdocsGraphNodeClick(g.getNodeAttributes(node)));
     vdocsRenderer.on('clickStage', closeVdocsPanel);
 
-    stats.textContent = 'links · ' + docNodes.length + ' docs · ' + beforeDocIds.size + ' before · ' + afterDocIds.size + ' after · ' + symbolNodes.length + ' symbols';
+    stats.textContent = 'liên kết · ' + docNodes.length + ' tài liệu · ' + beforeDocIds.size + ' trước · ' + afterDocIds.size + ' sau · ' + symbolNodes.length + ' symbol';
   }
 
   /**
@@ -148,9 +162,9 @@
       '<div class="panel-row"><span class="pl">File</span><span class="pv pv-file">' + esc(shortPath(attrs.file || '')) + '</span></div>' +
       '<div class="panel-row"><span class="pl">Lines</span><span class="pv">' + (attrs.startLine || 1) + '–' + (attrs.endLine || 1) + '</span></div>';
     if (attrs.relationLabel) {
-      html += '<div class="panel-row"><span class="pl">Layer</span><span class="pv">' + esc(attrs.relationLabel) + '</span></div>';
+      html += '<div class="panel-row"><span class="pl">Tầng</span><span class="pv">' + esc(attrs.relationLabel) + '</span></div>';
     }
-    if (attrs.content) html += '<div class="panel-section-title">Content</div><div class="vdocs-content">' + ((typeof marked !== 'undefined') ? marked.parse(attrs.content) : '<pre>' + esc(attrs.content) + '</pre>') + '</div>';
+    if (attrs.content) html += '<div class="panel-section-title">Nội dung</div><div class="vdocs-content">' + ((typeof marked !== 'undefined') ? marked.parse(attrs.content) : '<pre>' + esc(attrs.content) + '</pre>') + '</div>';
     if (attrs.signature) html += '<div class="panel-sig"><code>' + esc(attrs.signature) + '</code></div>';
     if (attrs.docString) html += '<div class="panel-doc">' + esc(attrs.docString.slice(0, 180)) + '</div>';
     document.getElementById('vdocs-panel-content').innerHTML = html;
@@ -177,3 +191,7 @@
     const panel = document.getElementById('vdocs-panel');
     if (panel) panel.classList.remove('open');
   }
+
+  window.loadDocNeighborhood = loadDocNeighborhood;
+  window.renderLinksGraph = renderLinksGraph;
+  window.closeVdocsPanel = closeVdocsPanel;

@@ -243,9 +243,23 @@
     .tstat { display: flex; gap: 5px; align-items: center; font-size: 12px; }
     .tsl { color: var(--text2); }
     .tsv { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+    .index-run-note { margin-left: 12px; font-size: 11px; color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 340px; }
 
     /* Other tabs: scrollable */
     .tab:not(#tab-graph):not(#tab-docs):not(#tab-vdocs).active { overflow-y: auto; }
+    .health-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); gap:14px; margin-top:18px; }
+    .health-card { border:1px solid var(--border); border-radius:16px; padding:16px; background:linear-gradient(180deg, rgba(15,23,42,.96), rgba(15,23,42,.82)); box-shadow:0 12px 30px rgba(2,6,23,.18); }
+    .health-card.good { border-color:rgba(16,185,129,.35); }
+    .health-card.warn { border-color:rgba(245,158,11,.35); }
+    .health-card.bad { border-color:rgba(239,68,68,.35); }
+    .health-label { font-size:11px; color:var(--text2); text-transform:uppercase; letter-spacing:.08em; }
+    .health-value { margin-top:8px; font-size:30px; font-weight:700; letter-spacing:-.03em; color:var(--text); }
+    .health-meta { margin-top:6px; font-size:12px; color:var(--text2); line-height:1.5; }
+    .health-details { display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:14px; margin-top:14px; }
+    .health-detail-card { border:1px solid var(--border); border-radius:14px; padding:14px 16px; background:rgba(15,23,42,.7); }
+    .health-list { display:grid; gap:8px; font-size:13px; color:var(--text2); line-height:1.55; }
+    .health-file-list { display:grid; gap:6px; margin-top:8px; }
+    .health-file-row { font-size:11px; color:var(--text2); background:rgba(255,255,255,.03); border:1px solid var(--border); border-radius:8px; padding:6px 8px; overflow:hidden; text-overflow:ellipsis; }
     .tab-inner { padding: 28px 32px; max-width: 900px; width: 100%; }
     /* ── Docs sub-tab layout ──────────────────────────────────────────── */
     #tab-docs { overflow: hidden; }
@@ -853,18 +867,18 @@
   </div>
 
   <div class="project-select-wrap">
-    <div class="project-select-label">Project</div>
+    <div class="project-select-label">Dự án</div>
     <div class="project-select-row">
-      <select id="project-select" class="project-select"><option value="">Loading…</option></select>
-      <button class="btn-icon" id="btn-add-proj" title="Add project" onclick="toggleAddProject()">+</button>
-      <button class="btn-icon" id="btn-cfg-proj" title="Project settings" onclick="openProjectSettings()">⚙</button>
+      <select id="project-select" class="project-select"><option value="">Đang tải…</option></select>
+      <button class="btn-icon" id="btn-add-proj" title="Thêm dự án" onclick="toggleAddProject()">+</button>
+      <button class="btn-icon" id="btn-cfg-proj" title="Thiết lập dự án" onclick="openProjectSettings()">⚙</button>
     </div>
     <div id="add-project-form" class="inline-form" style="display:none">
       <div class="path-field-row">
         <input type="text" id="add-project-name" class="input-inline" placeholder="Tên project…" />
       </div>
       <div class="inline-form-actions">
-        <button class="btn-primary" onclick="doAddProject()">Add</button>
+        <button class="btn-primary" onclick="doAddProject()">Thêm</button>
         <button class="btn-secondary" onclick="cancelAddProject()">✕</button>
       </div>
       <div id="add-project-msg"></div>
@@ -872,31 +886,34 @@
   </div>
 
   <button class="nav-btn active" data-tab="graph">
-    <span class="nav-icon">◉</span> Graph
+    <span class="nav-icon">◉</span> Đồ thị
+  </button>
+  <button class="nav-btn" data-tab="health">
+    <span class="nav-icon">✦</span> Sức khỏe
   </button>
   <button class="nav-btn" data-tab="search">
-    <span class="nav-icon">⌕</span> Search
+    <span class="nav-icon">⌕</span> Tìm kiếm
   </button>
   <button class="nav-btn" data-tab="impact">
-    <span class="nav-icon">⚑</span> Impact
+    <span class="nav-icon">⚑</span> Ảnh hưởng
   </button>
   <button class="nav-btn" data-tab="flow">
-    <span class="nav-icon">⟶</span> Flow
+    <span class="nav-icon">⟶</span> Luồng
   </button>
   <button class="nav-btn" data-tab="module">
     <span class="nav-icon">▤</span> Module
   </button>
   <button class="nav-btn" data-tab="docs">
-    <span class="nav-icon">📄</span> Docs
+    <span class="nav-icon">📄</span> Tài liệu
   </button>
   <button class="nav-btn" data-tab="vdocs">
-    <span class="nav-icon">🔗</span> Visual Docs
+    <span class="nav-icon">🔗</span> Tài liệu trực quan
   </button>
   <button class="nav-btn" data-tab="mcp">
     <span class="nav-icon">⬡</span> MCP
   </button>
   <button class="nav-btn" data-tab="rules">
-    <span class="nav-icon">⚙</span> Parse Rules
+    <span class="nav-icon">⚙</span> Luật parse
   </button>
 
 </aside>
@@ -907,19 +924,20 @@
   <!-- Graph tab -->
   <section class="tab active" id="tab-graph">
     <div id="graph-toolbar">
-      <button class="btn-index" id="btn-index" onclick="doIndex()">⟳ Index</button>
-      <button class="btn-index" id="btn-index-all" onclick="doIndexAll()">All</button>
+      <button class="btn-index" id="btn-index" onclick="doIndex()">⟳ Lập chỉ mục</button>
+      <button class="btn-index" id="btn-index-all" onclick="doIndexAll()">Toàn bộ</button>
       <label class="delta-label"><input type="checkbox" id="index-delta" /> Delta</label>
       <div class="toolbar-stats">
-        <span class="tstat"><span class="tsl">Symbols</span>&nbsp;<span class="tsv" id="stat-nodes">—</span></span>
+        <span class="tstat"><span class="tsl">Ký hiệu</span>&nbsp;<span class="tsv" id="stat-nodes">—</span></span>
         <span class="tstat"><span class="tsl">Edges</span>&nbsp;<span class="tsv" id="stat-edges">—</span></span>
-        <span class="tstat"><span class="tsl">Clusters</span>&nbsp;<span class="tsv" id="stat-clusters">—</span></span>
+        <span class="tstat"><span class="tsl">Cụm</span>&nbsp;<span class="tsv" id="stat-clusters">—</span></span>
       </div>
+      <div class="index-run-note" id="index-run-note"></div>
     </div>
     <div id="sigma-wrap">
       <div id="sigma-container"></div>
       <div id="graph-search">
-        <input type="text" id="graph-search-input" placeholder="Filter nodes..." />
+        <input type="text" id="graph-search-input" placeholder="Lọc node..." />
       </div>
       <div id="graph-panel">
         <div class="panel-header">
@@ -932,14 +950,26 @@
     </div>
   </section>
 
+  <!-- Health tab -->
+  <section class="tab" id="tab-health">
+    <div class="tab-inner">
+      <div class="tab-title-row">
+        <h2 class="tab-title">Sức khỏe tri thức</h2>
+        <button class="btn-secondary" onclick="loadHealthDashboard()">Làm mới</button>
+      </div>
+      <p class="tab-desc">Stakeholder-facing snapshot cho coverage, trace completeness, provenance confidence, drift, orphaned marks, và freshness.</p>
+      <div id="health-results"></div>
+    </div>
+  </section>
+
   <!-- Search tab -->
   <section class="tab" id="tab-search">
     <div class="tab-inner">
-      <h2 class="tab-title">Search</h2>
+      <h2 class="tab-title">Tìm kiếm</h2>
       <p class="tab-desc">Tìm symbol hoặc keyword trong toàn bộ knowledge graph.</p>
       <div class="form-row">
         <input type="text" id="search-input" class="input-lg" placeholder="Symbol name hoặc keyword..." />
-        <button class="btn-primary" onclick="doSearch()">Search</button>
+        <button class="btn-primary" onclick="doSearch()">Tìm</button>
       </div>
       <div id="search-type-filter" class="type-filter-bar" style="display:none"></div>
       <div id="search-results"></div>
@@ -949,12 +979,12 @@
   <!-- Impact tab -->
   <section class="tab" id="tab-impact">
     <div class="tab-inner">
-      <h2 class="tab-title">Impact Analysis</h2>
+      <h2 class="tab-title">Phân tích ảnh hưởng</h2>
       <p class="tab-desc">Phân tích symbols nào bị ảnh hưởng khi thay đổi một symbol.</p>
       <div class="form-row">
-        <input type="text" id="impact-name" class="input-lg" placeholder="Symbol name..." />
-        <label class="label-inline">Depth <input type="number" id="impact-depth" class="input-sm" value="2" min="1" max="5" /></label>
-        <button class="btn-primary" onclick="doImpact()">Analyze</button>
+        <input type="text" id="impact-name" class="input-lg" placeholder="Tên symbol..." />
+        <label class="label-inline">Độ sâu <input type="number" id="impact-depth" class="input-sm" value="2" min="1" max="5" /></label>
+        <button class="btn-primary" onclick="doImpact()">Phân tích</button>
       </div>
       <div id="impact-results"></div>
     </div>
@@ -963,17 +993,17 @@
   <!-- Flow tab -->
   <section class="tab" id="tab-flow">
     <div class="tab-inner">
-      <h2 class="tab-title">Process Flow</h2>
-      <p class="tab-desc">Trace call flow từ entry point code hoặc nối một luồng tài liệu xuống các symbol và CALLS flow trong code.</p>
+      <h2 class="tab-title">Luồng xử lý</h2>
+      <p class="tab-desc">Lần theo CALLS flow từ entry point code hoặc nối một luồng tài liệu xuống các symbol và flow trong code.</p>
       <div class="form-row">
         <select id="flow-mode" class="input-sm" style="min-width:130px">
-          <option value="code">Code Entry</option>
-          <option value="doc">Doc -> Code</option>
+          <option value="code">Điểm vào code</option>
+          <option value="doc">Tài liệu -> Code</option>
         </select>
-        <input type="text" id="flow-entry" class="input-lg" placeholder="Entry point function hoặc doc heading..." />
-        <label class="label-inline">Doc Depth <input type="number" id="flow-doc-depth" class="input-sm" value="3" min="1" max="6" /></label>
-        <label class="label-inline">Code Depth <input type="number" id="flow-depth" class="input-sm" value="5" min="1" max="10" /></label>
-        <button class="btn-primary" onclick="doFlow()">Trace</button>
+        <input type="text" id="flow-entry" class="input-lg" placeholder="Hàm entry point hoặc heading tài liệu..." />
+        <label class="label-inline">Độ sâu doc <input type="number" id="flow-doc-depth" class="input-sm" value="3" min="1" max="6" /></label>
+        <label class="label-inline">Độ sâu code <input type="number" id="flow-depth" class="input-sm" value="5" min="1" max="10" /></label>
+        <button class="btn-primary" onclick="doFlow()">Truy dấu</button>
       </div>
       <div id="flow-results"></div>
     </div>
@@ -982,11 +1012,11 @@
   <!-- Module tab -->
   <section class="tab" id="tab-module">
     <div class="tab-inner">
-      <h2 class="tab-title">Module Overview</h2>
+      <h2 class="tab-title">Tổng quan module</h2>
       <p class="tab-desc">Tổng quan symbols trong một module hoặc folder.</p>
       <div class="form-row">
-        <input type="text" id="module-pattern" class="input-lg" placeholder="Module name hoặc file path..." />
-        <button class="btn-primary" onclick="doModule()">Overview</button>
+        <input type="text" id="module-pattern" class="input-lg" placeholder="Tên module hoặc đường dẫn file..." />
+        <button class="btn-primary" onclick="doModule()">Xem</button>
       </div>
       <div id="module-results"></div>
     </div>
@@ -1010,12 +1040,12 @@
 
     <!-- Sub-tab nav -->
     <div class="docs-subnav">
-      <button class="docs-subtab active" data-docs-tab="links" onclick="switchDocsTab('links')">Links</button>
-      <button class="docs-subtab" data-docs-tab="frefs" onclick="switchDocsTab('frefs')">Forward Refs</button>
+      <button class="docs-subtab active" data-docs-tab="links" onclick="switchDocsTab('links')">Liên kết</button>
+      <button class="docs-subtab" data-docs-tab="frefs" onclick="switchDocsTab('frefs')">Tham chiếu trước</button>
       <button class="docs-subtab" data-docs-tab="coverage" onclick="switchDocsTab('coverage')">Coverage</button>
-      <button class="docs-subtab" data-docs-tab="linked" onclick="switchDocsTab('linked')">Linked Docs</button>
-      <button class="docs-subtab" data-docs-tab="sync" onclick="switchDocsTab('sync')">Doc Sync</button>
-      <button class="docs-subtab" data-docs-tab="stale" onclick="switchDocsTab('stale')">Stale Links</button>
+      <button class="docs-subtab" data-docs-tab="linked" onclick="switchDocsTab('linked')">Tài liệu liên kết</button>
+      <button class="docs-subtab" data-docs-tab="sync" onclick="switchDocsTab('sync')">Đồng bộ tài liệu</button>
+      <button class="docs-subtab" data-docs-tab="stale" onclick="switchDocsTab('stale')">Liên kết stale</button>
     </div>
 
     <!-- Sub-tab panels -->
@@ -1025,38 +1055,38 @@
       <div class="docs-panel active" id="docs-panel-links">
         <div class="tab-inner">
           <div class="tab-title-row">
-            <h2 class="tab-title">Links</h2>
-            <button class="btn-secondary" onclick="loadAllLinks()">Refresh</button>
+            <h2 class="tab-title">Liên kết</h2>
+            <button class="btn-secondary" onclick="loadAllLinks()">Làm mới</button>
           </div>
           <p class="tab-desc">Tất cả liên kết doc→symbol. Thêm manual link hoặc unlink từng dòng.</p>
           <div class="links-filter-row">
-            <button class="links-filter-btn active" data-links-mode="all" onclick="setDocsLinksMode('all', this)">All</button>
+            <button class="links-filter-btn active" data-links-mode="all" onclick="setDocsLinksMode('all', this)">Tất cả</button>
             <button class="links-filter-btn" data-links-mode="code" onclick="setDocsLinksMode('code', this)">Doc→Code</button>
-            <button class="links-filter-btn" data-links-mode="before" onclick="setDocsLinksMode('before', this)">Before</button>
-            <button class="links-filter-btn" data-links-mode="after" onclick="setDocsLinksMode('after', this)">After</button>
+            <button class="links-filter-btn" data-links-mode="before" onclick="setDocsLinksMode('before', this)">Trước</button>
+            <button class="links-filter-btn" data-links-mode="after" onclick="setDocsLinksMode('after', this)">Sau</button>
           </div>
-          <div id="links-mode-note" class="tab-desc" style="margin-bottom:10px">`All` hiển thị cả doc→code và doc layers.</div>
+          <div id="links-mode-note" class="tab-desc" style="margin-bottom:10px">`All` hiển thị cả doc→code và các tầng tài liệu.</div>
           <div id="links-code-wrap">
           <div class="form-row" style="margin-bottom:8px">
-            <input type="text" id="manual-link-doc" class="input-lg" placeholder="Doc section heading or ID…" style="flex:1.2" />
+            <input type="text" id="manual-link-doc" class="input-lg" placeholder="Heading hoặc ID của section tài liệu…" style="flex:1.2" />
             <input type="text" id="manual-link-sym" class="input-lg" placeholder="Symbol name…" style="flex:1" />
-            <button class="btn-primary" onclick="doManualLink()">Link</button>
+            <button class="btn-primary" onclick="doManualLink()">Liên kết</button>
           </div>
           <div id="manual-link-status" style="font-size:11px;margin-bottom:10px;min-height:16px"></div>
           <div class="form-row" style="margin-bottom:8px">
-            <input type="text" id="manual-docref-doc" class="input-lg" placeholder="PRD doc section heading or ID…" style="flex:1.1" />
-            <input type="text" id="manual-docref-ref" class="input-lg" placeholder="Copied source: doc:../brd/PLA-01.md#slug" style="flex:1.4" />
-            <button class="btn-secondary" onclick="validateDocRefMark()">Validate</button>
-            <button class="btn-primary" id="manual-docref-mark-btn" onclick="createDocRefMark()" disabled>Mark</button>
+            <input type="text" id="manual-docref-doc" class="input-lg" placeholder="Heading hoặc ID của section PRD…" style="flex:1.1" />
+            <input type="text" id="manual-docref-ref" class="input-lg" placeholder="Nguồn đã chép: doc:../brd/PLA-01.md#slug" style="flex:1.4" />
+            <button class="btn-secondary" onclick="validateDocRefMark()">Kiểm tra</button>
+            <button class="btn-primary" id="manual-docref-mark-btn" onclick="createDocRefMark()" disabled>Đánh dấu</button>
           </div>
           <div id="manual-docref-status" style="font-size:11px;margin-bottom:10px;min-height:16px"></div>
           <div id="manual-docref-preview" style="margin-bottom:10px"></div>
           </div>
           <div id="links-layers-wrap">
-          <div class="section-title">Doc Layers</div>
+          <div class="section-title">Tầng tài liệu</div>
           <div class="form-row" style="margin-bottom:8px">
-            <input type="text" id="doc-layers-query" class="input-lg" placeholder="Doc section heading or ID…" style="flex:1.3" />
-            <button class="btn-secondary" onclick="doDocLayers()">Inspect</button>
+            <input type="text" id="doc-layers-query" class="input-lg" placeholder="Heading hoặc ID của section tài liệu…" style="flex:1.3" />
+            <button class="btn-secondary" onclick="doDocLayers()">Xem</button>
           </div>
           <div class="tab-desc" style="margin-bottom:10px">`Before` là tài liệu hiện tại đang tham chiếu tới. `After` là các tài liệu chi tiết hóa hoặc tham chiếu ngược về nó.</div>
           <div id="doc-layers-results"></div>
@@ -1071,10 +1101,10 @@
       <div class="docs-panel" id="docs-panel-frefs">
         <div class="tab-inner">
           <div class="tab-title-row">
-            <h2 class="tab-title">Forward Refs</h2>
-            <button class="btn-secondary" onclick="loadForwardRefs()">Refresh</button>
+            <h2 class="tab-title">Tham chiếu trước</h2>
+            <button class="btn-secondary" onclick="loadForwardRefs()">Làm mới</button>
           </div>
-          <p class="tab-desc">Các ký hiệu <code>[[name]]</code> viết trong doc trước khi code tồn tại. Khi code được tạo, nhấn <strong>Promote</strong> để tạo link thật.</p>
+          <p class="tab-desc">Các ký hiệu <code>[[name]]</code> viết trong doc trước khi code tồn tại. Khi code được tạo, nhấn <strong>Nâng cấp</strong> để tạo link thật.</p>
           <div id="forward-refs-results"></div>
         </div>
       </div>
@@ -1083,10 +1113,10 @@
       <div class="docs-panel" id="docs-panel-coverage">
         <div class="tab-inner">
           <div class="tab-title-row">
-            <h2 class="tab-title">Coverage</h2>
-            <button class="btn-secondary" onclick="doValidate()">Refresh</button>
+            <h2 class="tab-title">Độ phủ</h2>
+            <button class="btn-secondary" onclick="doValidate()">Làm mới</button>
           </div>
-          <p class="tab-desc">Functions, Classes, Methods thiếu docstring và không có linked documentation.</p>
+          <p class="tab-desc">Functions, Classes, Methods thiếu docstring và không có tài liệu liên kết.</p>
           <div id="validate-results"></div>
         </div>
       </div>
@@ -1094,11 +1124,11 @@
       <!-- Linked Docs panel -->
       <div class="docs-panel" id="docs-panel-linked">
         <div class="tab-inner">
-          <h2 class="tab-title">Linked Docs</h2>
+          <h2 class="tab-title">Tài liệu liên kết</h2>
           <p class="tab-desc">Tìm tất cả tài liệu liên kết với một symbol.</p>
           <div class="form-row">
-            <input type="text" id="linked-docs-name" class="input-lg" placeholder="Symbol name..." />
-            <button class="btn-primary" onclick="doLinkedDocs()">Find</button>
+            <input type="text" id="linked-docs-name" class="input-lg" placeholder="Tên symbol..." />
+            <button class="btn-primary" onclick="doLinkedDocs()">Tìm</button>
           </div>
           <div id="linked-docs-results"></div>
         </div>
@@ -1107,11 +1137,11 @@
       <!-- Doc Sync panel -->
       <div class="docs-panel" id="docs-panel-sync">
         <div class="tab-inner">
-          <h2 class="tab-title">Doc Sync</h2>
+          <h2 class="tab-title">Đồng bộ tài liệu</h2>
           <p class="tab-desc">Kiểm tra symbol có docstring và linked docs không.</p>
           <div class="form-row">
-            <input type="text" id="docsync-name" class="input-lg" placeholder="Symbol name..." />
-            <button class="btn-primary" onclick="doDocSync()">Check</button>
+            <input type="text" id="docsync-name" class="input-lg" placeholder="Tên symbol..." />
+            <button class="btn-primary" onclick="doDocSync()">Kiểm tra</button>
           </div>
           <div id="docsync-results"></div>
         </div>
@@ -1121,8 +1151,8 @@
       <div class="docs-panel" id="docs-panel-stale">
         <div class="tab-inner">
           <div class="tab-title-row">
-            <h2 class="tab-title">Stale Links</h2>
-            <button class="btn-secondary" onclick="doValidateLinks()">Check</button>
+            <h2 class="tab-title">Liên kết stale</h2>
+            <button class="btn-secondary" onclick="doValidateLinks()">Kiểm tra</button>
           </div>
           <p class="tab-desc">Tìm doc→symbol edges bị stale (symbol không còn tồn tại).</p>
           <div id="validate-links-results"></div>
@@ -1135,15 +1165,28 @@
   <!-- Visual Docs tab -->
   <section class="tab" id="tab-vdocs">
     <div id="vdocs-toolbar">
-      <input type="text" id="vdocs-filter" class="input-lg" style="max-width:260px;font-size:12px;padding:6px 10px" placeholder="Filter by module or file…" />
-      <button class="btn-primary" style="padding:6px 14px;font-size:12px" onclick="loadDocGraph()">Apply</button>
+      <input type="text" id="vdocs-filter" class="input-lg" style="max-width:260px;font-size:12px;padding:6px 10px" placeholder="Lọc theo module hoặc file…" />
+      <button class="btn-primary" style="padding:6px 14px;font-size:12px" onclick="loadDocGraph()">Áp dụng</button>
       <div class="vdocs-mode-tabs" id="vdocs-type-btns">
-        <button class="type-filter-pill active" data-vtype="outline" onclick="setVdocsType('outline')">Outline</button>
-        <button class="type-filter-pill" data-vtype="links" onclick="setVdocsType('links')">Links</button>
+        <button class="type-filter-pill active" data-vtype="outline" onclick="setVdocsType('outline')">Dàn ý</button>
+        <button class="type-filter-pill" data-vtype="links" onclick="setVdocsType('links')">Liên kết</button>
       </div>
-      <label class="delta-label" style="margin-left:8px"><input type="checkbox" id="vdocs-expand-code" /> Code context</label>
+      <label id="vdocs-export-wrap" class="delta-label" style="margin-left:8px" title="Áp dụng cho sơ đồ Mermaid trong panel bên phải">
+        <span>Mức sơ đồ</span>
+        <select id="vdocs-export-view" class="input-inline" style="width:124px;font-size:12px;padding:5px 8px">
+          <option value="context">Context</option>
+          <option value="container">Container</option>
+          <option value="component" selected>Component</option>
+          <option value="code">Code</option>
+        </select>
+      </label>
+      <label id="vdocs-expand-code-wrap" class="delta-label" style="margin-left:8px" title="Chỉ áp dụng ở chế độ Liên kết">
+        <input type="checkbox" id="vdocs-expand-code" />
+        <span>Kèm code ở Liên kết</span>
+      </label>
+      <span id="vdocs-toolbar-note" style="font-size:11px;color:var(--text2);margin-left:8px"></span>
       <span id="vdocs-stats" style="margin-left:auto;font-size:11px;color:var(--text2)"></span>
-      <button class="btn-secondary" style="padding:5px 11px;font-size:12px;margin-left:8px" onclick="toggleVdocsConfig()" id="btn-vdocs-config" title="Configure doc sources & display">⚙ Config</button>
+      <button class="btn-secondary" style="padding:5px 11px;font-size:12px;margin-left:8px" onclick="toggleVdocsConfig()" id="btn-vdocs-config" title="Cấu hình nguồn tài liệu và cách hiển thị">⚙ Cấu hình</button>
     </div>
     <!-- Visual Docs config panel -->
     <div id="vdocs-config-panel" style="display:none;background:var(--surface);border-bottom:1px solid var(--border);padding:12px 18px;flex-shrink:0;overflow-y:auto;max-height:55vh">
@@ -1152,37 +1195,37 @@
         <!-- Left: doc sources -->
         <div style="flex:1;min-width:340px">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-            <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text2)">Doc Sources</span>
+            <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text2)">Nguồn tài liệu</span>
             <span style="font-size:10px;color:var(--text2)">(Visual Docs chỉ đọc trong phạm vi này)</span>
-            <button class="btn-secondary" style="padding:3px 10px;font-size:11px;margin-left:auto" onclick="vdocsScanDocSources()" id="btn-vdocs-scan">⊙ Scan project</button>
+            <button class="btn-secondary" style="padding:3px 10px;font-size:11px;margin-left:auto" onclick="vdocsScanDocSources()" id="btn-vdocs-scan">⊙ Quét dự án</button>
           </div>
           <!-- Current sources list -->
           <div id="vdocs-cfg-sources-list" style="margin-bottom:10px"></div>
           <!-- Add / Edit form -->
           <div id="vdocs-cfg-ds-form" style="padding:10px;border:1px dashed var(--border);border-radius:8px;background:var(--surface2)">
-            <div style="font-size:10px;color:var(--text2);margin-bottom:6px;font-weight:600" id="vdocs-cfg-ds-form-title">ADD DOC SOURCE</div>
+            <div style="font-size:10px;color:var(--text2);margin-bottom:6px;font-weight:600" id="vdocs-cfg-ds-form-title">THÊM NGUỒN TÀI LIỆU</div>
             <!-- Row 1: path + browse -->
             <div style="display:flex;gap:4px;margin-bottom:6px;align-items:center">
-              <span style="font-size:11px;color:var(--text2);min-width:52px">Path</span>
+              <span style="font-size:11px;color:var(--text2);min-width:52px">Đường dẫn</span>
               <input type="text" id="vdocs-cfg-ds-path" class="input-inline" style="flex:1;font-size:12px;padding:5px 8px" placeholder="docs/architecture" />
-              <button class="btn-icon" title="Browse folder" onclick="browseFor('vdocs-cfg-ds-path')" style="padding:4px 8px;font-size:14px">📁</button>
+              <button class="btn-icon" title="Chọn thư mục" onclick="browseFor('vdocs-cfg-ds-path')" style="padding:4px 8px;font-size:14px">📁</button>
             </div>
             <!-- Row 2: label + color + order -->
             <div style="display:flex;gap:4px;margin-bottom:6px;align-items:center">
-              <span style="font-size:11px;color:var(--text2);min-width:52px">Label</span>
+              <span style="font-size:11px;color:var(--text2);min-width:52px">Nhãn</span>
               <input type="text" id="vdocs-cfg-ds-label" class="input-inline" style="flex:1;font-size:12px;padding:5px 8px" placeholder="Kiến trúc" />
-              <input type="color" id="vdocs-cfg-ds-color-picker" style="width:32px;height:28px;border:1px solid var(--border);border-radius:4px;background:var(--surface);cursor:pointer;padding:2px" title="Color" />
-              <input type="text" id="vdocs-cfg-ds-color" class="input-inline" style="width:76px;font-size:12px;padding:5px 8px" placeholder="#60a5fa" title="Hex color" />
-              <input type="number" id="vdocs-cfg-ds-order" class="input-inline" style="width:46px;font-size:12px;padding:5px 6px" placeholder="1" title="Display order" min="1" />
+              <input type="color" id="vdocs-cfg-ds-color-picker" style="width:32px;height:28px;border:1px solid var(--border);border-radius:4px;background:var(--surface);cursor:pointer;padding:2px" title="Màu" />
+              <input type="text" id="vdocs-cfg-ds-color" class="input-inline" style="width:76px;font-size:12px;padding:5px 8px" placeholder="#60a5fa" title="Màu hex" />
+              <input type="number" id="vdocs-cfg-ds-order" class="input-inline" style="width:46px;font-size:12px;padding:5px 6px" placeholder="1" title="Thứ tự hiển thị" min="1" />
             </div>
             <!-- Row 3: excludeFiles -->
             <div style="display:flex;gap:4px;margin-bottom:8px;align-items:center">
-              <span style="font-size:11px;color:var(--text2);min-width:52px">Exclude</span>
-              <input type="text" id="vdocs-cfg-ds-exclude" class="input-inline" style="flex:1;font-size:12px;padding:5px 8px" placeholder="full.md, index.md" title="File names to exclude (comma-separated)" />
+              <span style="font-size:11px;color:var(--text2);min-width:52px">Loại trừ</span>
+              <input type="text" id="vdocs-cfg-ds-exclude" class="input-inline" style="flex:1;font-size:12px;padding:5px 8px" placeholder="full.md, index.md" title="Tên file cần loại trừ, cách nhau bởi dấu phẩy" />
             </div>
             <div style="display:flex;gap:6px">
-              <button class="btn-primary" style="padding:5px 14px;font-size:12px" id="vdocs-cfg-ds-submit" onclick="vdocsCfgSubmitSource()">+ Add</button>
-              <button class="btn-secondary" style="padding:5px 10px;font-size:12px;display:none" id="vdocs-cfg-ds-cancel" onclick="vdocsCfgCancelEdit()">Cancel</button>
+              <button class="btn-primary" style="padding:5px 14px;font-size:12px" id="vdocs-cfg-ds-submit" onclick="vdocsCfgSubmitSource()">+ Thêm</button>
+              <button class="btn-secondary" style="padding:5px 10px;font-size:12px;display:none" id="vdocs-cfg-ds-cancel" onclick="vdocsCfgCancelEdit()">Hủy</button>
             </div>
           </div>
           <!-- Scan results -->
@@ -1191,23 +1234,23 @@
 
         <!-- Right: display config -->
         <div style="min-width:200px;max-width:240px">
-          <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text2);margin-bottom:8px">Display</div>
+          <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text2);margin-bottom:8px">Hiển thị</div>
           <div class="path-field-row" style="margin-bottom:6px">
-            <span class="path-field-label">Group by</span>
+            <span class="path-field-label">Nhóm theo</span>
             <select id="vdocs-cfg-structure" class="input-inline" onchange="document.getElementById('vdocs-cfg-depth-row').style.display=this.value==='folder'?'flex':'none'">
-              <option value="docSource">By doc source</option>
-              <option value="folder">By folder</option>
-              <option value="file">By file</option>
-              <option value="flat">Flat</option>
+              <option value="docSource">Theo nguồn tài liệu</option>
+              <option value="folder">Theo thư mục</option>
+              <option value="file">Theo file</option>
+              <option value="flat">Phẳng</option>
             </select>
           </div>
           <div class="path-field-row" id="vdocs-cfg-depth-row" style="display:none;margin-bottom:6px">
-            <span class="path-field-label">Depth</span>
+            <span class="path-field-label">Độ sâu</span>
             <input type="number" id="vdocs-cfg-depth" class="input-inline" min="1" max="6" value="2" style="width:52px" />
           </div>
           <div style="display:flex;gap:8px;margin-top:14px">
-            <button class="btn-primary" style="padding:6px 14px;font-size:12px;flex:1" onclick="vdocsCfgSave()">Save</button>
-            <button class="btn-secondary" style="padding:6px 10px;font-size:12px" onclick="toggleVdocsConfig()">Close</button>
+            <button class="btn-primary" style="padding:6px 14px;font-size:12px;flex:1" onclick="vdocsCfgSave()">Lưu</button>
+            <button class="btn-secondary" style="padding:6px 10px;font-size:12px" onclick="toggleVdocsConfig()">Đóng</button>
           </div>
           <div id="vdocs-cfg-msg" style="margin-top:6px;font-size:11px"></div>
         </div>
@@ -1219,7 +1262,7 @@
       <div id="vdocs-container"></div>
       <div id="vdocs-empty" style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text2);flex-direction:column;gap:8px">
         <div style="font-size:32px">🔗</div>
-        <div style="font-size:13px">Index docs trước, rồi nhấn <strong>Apply</strong></div>
+        <div style="font-size:13px">Lập chỉ mục tài liệu trước, rồi nhấn <strong>Áp dụng</strong></div>
       </div>
     </div>
   </section>
@@ -1228,10 +1271,10 @@
   <section class="tab" id="tab-mcp">
     <div class="tab-inner">
       <div class="tab-title-row">
-        <h2 class="tab-title">MCP Server</h2>
-        <button class="btn-secondary" onclick="loadMcpConfig()">Refresh</button>
+        <h2 class="tab-title">Máy chủ MCP</h2>
+        <button class="btn-secondary" onclick="loadMcpConfig()">Làm mới</button>
       </div>
-      <p class="tab-desc">Config để kết nối AI tools (Claude Desktop, Cursor, Windsurf) với project này qua MCP.</p>
+      <p class="tab-desc">Cấu hình để kết nối các công cụ AI (Claude Desktop, Cursor, Windsurf) với dự án này qua MCP.</p>
       <div id="mcp-results"></div>
     </div>
   </section>
@@ -1247,9 +1290,9 @@
             <button class="btn-secondary" style="padding:2px 8px;font-size:11px;margin-left:auto" onclick="loadRuleSets()">↺</button>
           </div>
           <div style="display:flex;gap:6px">
-            <button class="btn-primary" style="flex:1;padding:5px 8px;font-size:11px" onclick="openNewRuleSetForm()">+ New</button>
+            <button class="btn-primary" style="flex:1;padding:5px 8px;font-size:11px" onclick="openNewRuleSetForm()">+ Mới</button>
             <select id="rs-lang-filter" class="mcp-filter-select" style="flex:1;font-size:11px" onchange="loadRuleSets()">
-              <option value="">All languages</option>
+              <option value="">Tất cả ngôn ngữ</option>
               <option value="typescript">TypeScript</option>
               <option value="javascript">JavaScript</option>
               <option value="python">Python</option>
@@ -1262,7 +1305,7 @@
       <div id="rs-detail" style="flex:1;overflow-y:auto;display:flex;flex-direction:column">
         <div id="rs-welcome" style="padding:32px;color:var(--text2);text-align:center;margin-top:60px">
           <div style="font-size:32px;margin-bottom:12px">⚙</div>
-          <div style="font-weight:600;font-size:15px;margin-bottom:8px;color:var(--text)">Parse RuleSets</div>
+          <div style="font-weight:600;font-size:15px;margin-bottom:8px;color:var(--text)">RuleSet parse</div>
           <div style="font-size:13px;line-height:1.7;max-width:360px;margin:0 auto">
             RuleSet = grammar + nhiều Tree-sitter queries.<br>
             3 cấp: <b>Global</b> → <b>Project</b> → override.<br>
@@ -1278,67 +1321,67 @@
   <section class="tab" id="tab-settings">
     <div class="tab-inner">
       <div class="tab-title-row">
-        <h2 class="tab-title">Project Settings</h2>
-        <button class="btn-secondary" onclick="renderProjectConfig()">Refresh</button>
+        <h2 class="tab-title">Thiết lập dự án</h2>
+        <button class="btn-secondary" onclick="renderProjectConfig()">Làm mới</button>
       </div>
       <div style="max-width:640px">
         <div class="path-field-row" style="margin-bottom:8px">
-          <span class="path-field-label">Name</span>
+          <span class="path-field-label">Tên</span>
           <input type="text" id="cfg-name" class="input-inline" />
         </div>
         <div class="path-field-row" style="margin-bottom:8px">
-          <span class="path-field-label">Code</span>
-          <input type="text" id="cfg-code" class="input-inline" placeholder="Unique code identifier" />
+          <span class="path-field-label">Mã</span>
+          <input type="text" id="cfg-code" class="input-inline" placeholder="Mã định danh duy nhất" />
         </div>
         <div style="margin-top:8px;margin-bottom:2px">
-          <div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Code Sources</div>
+          <div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Nguồn code</div>
           <div id="cfg-code-sources-list" class="doc-source-list"></div>
           <div class="doc-source-add" style="flex-wrap:wrap;gap:4px">
             <input type="text" id="cfg-cs-path" class="input-inline" style="flex:1;min-width:120px;font-size:11px;padding:3px 6px" placeholder="src, lib/core…" />
-            <button class="btn-icon btn-icon-sm" title="Browse folder" onclick="browseFor('cfg-cs-path')">📁</button>
-            <input type="text" id="cfg-cs-label" class="input-inline" style="width:72px;font-size:11px;padding:3px 6px" placeholder="label" />
-            <button class="btn-icon btn-icon-sm" id="cfg-cs-submit" title="Add or update code source" onclick="addCodeSource()">+</button>
-            <button class="btn-icon btn-icon-sm" id="cfg-cs-cancel" title="Cancel edit" style="display:none" onclick="resetCodeSourceForm()">×</button>
+            <button class="btn-icon btn-icon-sm" title="Chọn thư mục" onclick="browseFor('cfg-cs-path')">📁</button>
+            <input type="text" id="cfg-cs-label" class="input-inline" style="width:72px;font-size:11px;padding:3px 6px" placeholder="nhãn" />
+            <button class="btn-icon btn-icon-sm" id="cfg-cs-submit" title="Thêm hoặc cập nhật nguồn code" onclick="addCodeSource()">+</button>
+            <button class="btn-icon btn-icon-sm" id="cfg-cs-cancel" title="Hủy chỉnh sửa" style="display:none" onclick="resetCodeSourceForm()">×</button>
           </div>
           <div id="cfg-derived-root" style="font-size:11px;color:var(--text2);margin-top:3px"></div>
         </div>
         <div style="margin-top:8px;margin-bottom:2px">
-          <div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Doc Sources</div>
+          <div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Nguồn tài liệu</div>
           <div id="cfg-doc-sources-list" class="doc-source-list"></div>
           <div class="doc-source-add" style="flex-wrap:wrap;gap:4px">
             <input type="text" id="cfg-ds-path" class="input-inline" style="flex:1;min-width:120px;font-size:11px;padding:3px 6px" placeholder="docs/guide, README.md…" />
-            <button class="btn-icon btn-icon-sm" title="Browse folder" onclick="browseFor('cfg-ds-path')">📁</button>
-            <input type="text" id="cfg-ds-label" class="input-inline" style="width:72px;font-size:11px;padding:3px 6px" placeholder="label" />
-            <input type="text" id="cfg-ds-exclude" class="input-inline" style="width:80px;font-size:11px;padding:3px 6px" placeholder="full.md,…" title="Exclude files (comma-separated)" />
-            <input type="number" id="cfg-ds-order" class="input-inline" style="width:38px;font-size:11px;padding:3px 4px" placeholder="#" title="Display order" min="1" />
-            <input type="text" id="cfg-ds-color" class="input-inline" style="width:62px;font-size:11px;padding:3px 6px" placeholder="#color" title="Color hex" />
-            <button class="btn-icon btn-icon-sm" id="cfg-ds-submit" title="Add or update doc source" onclick="addDocSource()">+</button>
-            <button class="btn-icon btn-icon-sm" id="cfg-ds-cancel" title="Cancel edit" style="display:none" onclick="resetDocSourceForm()">×</button>
+            <button class="btn-icon btn-icon-sm" title="Chọn thư mục" onclick="browseFor('cfg-ds-path')">📁</button>
+            <input type="text" id="cfg-ds-label" class="input-inline" style="width:72px;font-size:11px;padding:3px 6px" placeholder="nhãn" />
+            <input type="text" id="cfg-ds-exclude" class="input-inline" style="width:80px;font-size:11px;padding:3px 6px" placeholder="full.md,…" title="File loại trừ, cách nhau bởi dấu phẩy" />
+            <input type="number" id="cfg-ds-order" class="input-inline" style="width:38px;font-size:11px;padding:3px 4px" placeholder="#" title="Thứ tự hiển thị" min="1" />
+            <input type="text" id="cfg-ds-color" class="input-inline" style="width:62px;font-size:11px;padding:3px 6px" placeholder="#màu" title="Màu hex" />
+            <button class="btn-icon btn-icon-sm" id="cfg-ds-submit" title="Thêm hoặc cập nhật nguồn tài liệu" onclick="addDocSource()">+</button>
+            <button class="btn-icon btn-icon-sm" id="cfg-ds-cancel" title="Hủy chỉnh sửa" style="display:none" onclick="resetDocSourceForm()">×</button>
           </div>
         </div>
         <div style="margin-top:16px;margin-bottom:2px">
-          <div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Visual Docs</div>
+          <div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Tài liệu trực quan</div>
           <div class="path-field-row">
-            <span class="path-field-label">Group by</span>
+            <span class="path-field-label">Nhóm theo</span>
             <select id="cfg-vdocs-structure" class="input-inline" onchange="document.getElementById('vdocs-depth-row').style.display=this.value==='folder'?'':'none'">
-              <option value="docSource">By doc source</option>
-              <option value="folder">By folder</option>
-              <option value="file">By file</option>
-              <option value="flat">Flat</option>
+              <option value="docSource">Theo nguồn tài liệu</option>
+              <option value="folder">Theo thư mục</option>
+              <option value="file">Theo file</option>
+              <option value="flat">Phẳng</option>
             </select>
           </div>
           <div class="path-field-row" id="vdocs-depth-row" style="display:none">
-            <span class="path-field-label">Folder depth</span>
+            <span class="path-field-label">Độ sâu thư mục</span>
             <input type="number" id="cfg-vdocs-depth" class="input-inline" min="1" max="6" value="2" />
           </div>
           <div style="font-size:10px;color:var(--text2);margin-top:4px">
-            <b>By doc source</b>: group theo label của Doc Sources. <b>By folder</b>: group theo thư mục (dùng depth).
+            <b>Theo nguồn tài liệu</b>: nhóm theo label của Doc Sources. <b>Theo thư mục</b>: nhóm theo thư mục (dùng depth).
           </div>
         </div>
         <div id="cfg-stats" style="font-size:11px;color:var(--text2);padding:10px 0 4px"></div>
         <div id="cfg-msg" style="margin-bottom:6px"></div>
-        <button class="btn-primary" style="width:100%;margin-bottom:8px;font-size:13px;padding:8px" onclick="saveProjectConfig()">Save</button>
-        <button class="btn-danger" onclick="doRemoveProject()">Remove from registry</button>
+        <button class="btn-primary" style="width:100%;margin-bottom:8px;font-size:13px;padding:8px" onclick="saveProjectConfig()">Lưu</button>
+        <button class="btn-danger" onclick="doRemoveProject()">Gỡ khỏi registry</button>
       </div>
     </div>
   </section>

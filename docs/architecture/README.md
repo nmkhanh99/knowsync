@@ -30,3 +30,5 @@ Mô hình hiện tại có 3 lớp map chính:
 - [15. Dependency stack](./15-15-dependency-stack.md)
 - [16. Bản đồ liên kết code và tài liệu](./16-16-code-doc-link-map.md)
 - [17. Audit parse/link cho UI public](./17-17-index-html-parse-audit.md)
+- [18. Living Architecture System 2.0 Roadmap](./18-18-living-architecture-and-freshness-roadmap.md)
+- [19. Implementation Plan — Living Architecture System 2.0](./19-19-implementation-plan-living-architecture-system-2-0.md)

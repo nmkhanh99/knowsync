@@ -7,7 +7,7 @@
     if (!data) { el.innerHTML = errHTML('Validation failed'); return; }
 
     if (data.total === 0) {
-      el.innerHTML = '<div class="success-box">All Functions, Classes, and Methods are documented.</div>'; return;
+      el.innerHTML = '<div class="success-box">Tất cả Functions, Classes, và Methods đều đã có tài liệu.</div>'; return;
     }
 
     const byFile = {};
@@ -39,10 +39,10 @@
     const el = document.getElementById('sugg-' + symbolId);
     if (!el) return;
     if (el.dataset.loaded) { el.style.display = el.style.display === 'none' ? '' : 'none'; return; }
-    el.innerHTML = loading('Searching…');
+    el.innerHTML = loading('Đang tìm…');
     const data = await api('/api/suggest-links?name=' + enc(symbolName));
     if (!data || !data.length) {
-      el.innerHTML = '<div style="font-size:11px;color:var(--text2);padding:4px 0">No doc sections found mentioning "' + esc(symbolName) + '"</div>';
+      el.innerHTML = '<div style="font-size:11px;color:var(--text2);padding:4px 0">Không tìm thấy section tài liệu nào nhắc tới "' + esc(symbolName) + '"</div>';
       el.dataset.loaded = '1';
       return;
     }
@@ -84,11 +84,11 @@
         if (data.markId) {
           const badge = document.createElement('span');
           badge.className = 'mark-badge';
-          badge.textContent = '🔖 marked';
+          badge.textContent = '🔖 đã đánh dấu';
           btn.insertAdjacentElement('afterend', badge);
           loadMarksBanner();
         }
-      } else { btn.textContent = '✗'; btn.disabled = false; btn.title = data.error || 'Failed'; }
+      } else { btn.textContent = '✗'; btn.disabled = false; btn.title = data.error || 'Thất bại'; }
     } catch (e) { btn.textContent = '✗'; btn.disabled = false; }
   }
 
@@ -112,13 +112,13 @@
           row.style.opacity = '0.4';
           const badge = document.createElement('span');
           badge.className = 'mark-badge';
-          badge.textContent = '🔖 unlinked';
+          badge.textContent = '🔖 đã gỡ liên kết';
           btn.replaceWith(badge);
         } else {
           btn.textContent = '✓ Unlinked';
         }
         loadMarksBanner();
-      } else { btn.textContent = '✗'; btn.disabled = false; btn.title = data.error || 'Failed'; }
+      } else { btn.textContent = '✗'; btn.disabled = false; btn.title = data.error || 'Thất bại'; }
     } catch (e) { btn.textContent = '✗'; btn.disabled = false; }
   }
 
@@ -134,7 +134,7 @@
       const marks = await r.json();
       if (!marks.length) { banner.style.display = 'none'; return; }
       banner.style.display = '';
-      text.textContent = marks.length + ' pending mark' + (marks.length > 1 ? 's' : '') + ' chờ AI agent xử lý';
+      text.textContent = marks.length + ' mark đang chờ xử lý';
       list.innerHTML = marks.map(m => {
         const actionClass = m.action === 'link' ? 'mark-action-link' : 'mark-action-unlink';
         const actionLabel = m.action === 'link' ? '+LINK' : '−UNLINK';
@@ -148,7 +148,7 @@
             '<span class="mark-file">' + esc(shortPath(m.targetDocFilePath)) + '#' + esc(m.targetDocSlug || '') + '</span>' +
             '<span style="color:var(--text2);font-size:10px;margin-left:6px"><code>' + esc(m.annotationText || m.wikiAnnotationText) + '</code></span>' +
             '<span style="color:var(--text2);font-size:10px;margin-left:4px">' + esc(date) + '</span>' +
-            '<button class="btn-secondary" style="padding:1px 7px;font-size:10px;margin-left:4px" data-mark-id="' + esc(m.id) + '" onclick="resolveMarkRow(this)">Resolve</button>' +
+            '<button class="btn-secondary" style="padding:1px 7px;font-size:10px;margin-left:4px" data-mark-id="' + esc(m.id) + '" onclick="resolveMarkRow(this)">Xử lý</button>' +
           '</div>';
         }
         return '<div class="mark-row">' +
@@ -159,7 +159,7 @@
           '<span class="mark-file">' + esc(shortPath(m.symbolFilePath)) + '</span>' +
           '<span style="color:var(--text2);font-size:10px;margin-left:4px">' + esc(date) + '</span>' +
           '<button class="btn-secondary" style="padding:1px 7px;font-size:10px;margin-left:4px" ' +
-            'data-mark-id="' + esc(m.id) + '" onclick="resolveMarkRow(this)">Resolve</button>' +
+            'data-mark-id="' + esc(m.id) + '" onclick="resolveMarkRow(this)">Xử lý</button>' +
         '</div>';
       }).join('');
     } catch (e) { /* silent */ }
@@ -185,9 +185,9 @@
       const r = await fetch('/api/doc-link-marks/' + enc(markId) + '/resolve?project=' + enc(currentProject), { method: 'PATCH' });
       const data = await r.json();
       if (data.resolved) { btn.closest('.mark-row').style.opacity = '0.4'; btn.textContent = '✓'; }
-      else { btn.disabled = false; btn.textContent = 'Resolve'; }
+      else { btn.disabled = false; btn.textContent = 'Xử lý'; }
       await loadMarksBanner();
-    } catch (e) { btn.disabled = false; btn.textContent = 'Resolve'; }
+    } catch (e) { btn.disabled = false; btn.textContent = 'Xử lý'; }
   }
 
   document.getElementById('linked-docs-name').addEventListener('keydown', e => { if (e.key === 'Enter') doLinkedDocs(); });
@@ -228,7 +228,7 @@
     navigator.clipboard.writeText(text).then(() => {
       if (!btn) return;
       const prev = btn.textContent;
-      btn.textContent = 'Copied';
+      btn.textContent = 'Đã chép';
       setTimeout(() => { btn.textContent = prev; }, 900);
     }).catch(() => {});
   }
@@ -247,10 +247,10 @@
     tableWrap.style.display = docsLinksMode === 'before' || docsLinksMode === 'after' ? 'none' : '';
     layersWrap.style.display = docsLinksMode === 'code' ? 'none' : '';
     if (note) {
-      if (docsLinksMode === 'code') note.textContent = '`Doc→Code` tập trung vào bảng links và manual linking.';
+      if (docsLinksMode === 'code') note.textContent = '`Doc→Code` tập trung vào bảng liên kết và liên kết thủ công.';
       else if (docsLinksMode === 'before') note.textContent = '`Before` chỉ tập trung vào các tài liệu nền mà section hiện tại đang tham chiếu tới.';
       else if (docsLinksMode === 'after') note.textContent = '`After` chỉ tập trung vào các tài liệu đang trỏ ngược về section hiện tại.';
-      else note.textContent = '`All` hiển thị cả doc→code và doc layers.';
+      else note.textContent = '`All` hiển thị cả doc→code và các tầng tài liệu.';
     }
     if ((docsLinksMode === 'before' || docsLinksMode === 'after') && document.getElementById('doc-layers-query').value.trim()) {
       doDocLayers();
@@ -270,9 +270,9 @@
       '</div>' +
       '<div class="layer-actions">' +
         '<button class="btn-secondary" style="padding:2px 8px;font-size:10px" onclick="openDocLayers(' + "'" + docId + "'" + ')">' + esc(kind) + '</button>' +
-        '<button class="btn-secondary" style="padding:2px 8px;font-size:10px" onclick="gotoDocFlow(' + "'" + 'doc:' + docId + "'" + ')">Trace Flow</button>' +
-        '<button class="btn-secondary" style="padding:2px 8px;font-size:10px" onclick=\'copyLayerAnnotation("' + src + '","' + target + '","' + slug + '","at",this)\'>Copy @doc</button>' +
-        '<button class="btn-secondary" style="padding:2px 8px;font-size:10px" onclick=\'copyLayerAnnotation("' + src + '","' + target + '","' + slug + '","wiki",this)\'>Copy [[doc]]</button>' +
+        '<button class="btn-secondary" style="padding:2px 8px;font-size:10px" onclick="gotoDocFlow(' + "'" + docId + "'" + ')">Truy dấu luồng</button>' +
+        '<button class="btn-secondary" style="padding:2px 8px;font-size:10px" onclick=\'copyLayerAnnotation("' + src + '","' + target + '","' + slug + '","at",this)\'>Chép @doc</button>' +
+        '<button class="btn-secondary" style="padding:2px 8px;font-size:10px" onclick=\'copyLayerAnnotation("' + src + '","' + target + '","' + slug + '","wiki",this)\'>Chép [[doc]]</button>' +
       '</div>' +
     '</div>';
   }
@@ -284,13 +284,13 @@
     const raw = (query ?? document.getElementById('doc-layers-query').value).trim();
     const el = document.getElementById('doc-layers-results');
     if (!raw) {
-      el.innerHTML = empty('Enter a doc section heading or ID to inspect doc layers.');
+      el.innerHTML = empty('Nhập heading hoặc ID của section tài liệu để xem các tầng tài liệu.');
       return;
     }
     document.getElementById('doc-layers-query').value = raw;
-    el.innerHTML = loading('Loading doc layers…');
+    el.innerHTML = loading('Đang tải tầng tài liệu…');
     const data = await api('/api/doc-section?query=' + enc(raw));
-    if (!data || !data.section) { el.innerHTML = errHTML('Doc section not found'); return; }
+    if (!data || !data.section) { el.innerHTML = errHTML('Không tìm thấy section tài liệu'); return; }
 
     const before = Array.isArray(data.beforeDocs) ? data.beforeDocs : [];
     const after = Array.isArray(data.afterDocs) ? data.afterDocs : [];
@@ -307,12 +307,12 @@
         meta +
         '<div class="layer-row">' +
           '<div class="layer-col">' +
-            '<div class="layer-col-title">Before (' + visibleBefore.length + ')</div>' +
-            (visibleBefore.length ? visibleBefore.map((doc) => renderLayerDoc(doc, 'Open', data.section.filePath)).join('') : '<div style="color:var(--text2);font-size:11px">' + (docsLinksMode === 'after' ? 'Hidden in After mode.' : 'No upstream docs.') + '</div>') +
+            '<div class="layer-col-title">Trước (' + visibleBefore.length + ')</div>' +
+            (visibleBefore.length ? visibleBefore.map((doc) => renderLayerDoc(doc, 'Mở', data.section.filePath)).join('') : '<div style="color:var(--text2);font-size:11px">' + (docsLinksMode === 'after' ? 'Đang ẩn trong chế độ Sau.' : 'Không có tài liệu upstream.') + '</div>') +
           '</div>' +
           '<div class="layer-col">' +
-            '<div class="layer-col-title">After (' + visibleAfter.length + ')</div>' +
-            (visibleAfter.length ? visibleAfter.map((doc) => renderLayerDoc(doc, 'Open', data.section.filePath)).join('') : '<div style="color:var(--text2);font-size:11px">' + (docsLinksMode === 'before' ? 'Hidden in Before mode.' : 'No downstream docs.') + '</div>') +
+            '<div class="layer-col-title">Sau (' + visibleAfter.length + ')</div>' +
+            (visibleAfter.length ? visibleAfter.map((doc) => renderLayerDoc(doc, 'Mở', data.section.filePath)).join('') : '<div style="color:var(--text2);font-size:11px">' + (docsLinksMode === 'before' ? 'Đang ẩn trong chế độ Trước.' : 'Không có tài liệu downstream.') + '</div>') +
           '</div>' +
         '</div>' +
       '</div>';
@@ -331,25 +331,25 @@
     const preview = document.getElementById('manual-docref-preview');
     if (btn) {
       btn.disabled = true;
-      btn.textContent = 'Mark';
+      btn.textContent = 'Đánh dấu';
     }
     if (preview) preview.innerHTML = '';
   }
 
   function renderDocRefValidationPreview(data) {
     return '<div class="symbol-card">' +
-      '<div class="symbol-header"><span class="symbol-name">Validated Doc Layer</span></div>' +
+      '<div class="symbol-header"><span class="symbol-name">Tầng tài liệu đã kiểm tra</span></div>' +
       '<div class="layer-row">' +
         '<div class="layer-col">' +
-          '<div class="layer-col-title">Source PRD</div>' +
+          '<div class="layer-col-title">PRD nguồn</div>' +
           '<div class="layer-doc"><div class="layer-doc-main"><div class="layer-doc-heading">' + esc(data.source.heading) + '</div><div class="layer-doc-file">' + esc(shortPath(data.source.filePath)) + '#' + esc(data.source.slug || '') + '</div></div></div>' +
         '</div>' +
         '<div class="layer-col">' +
-          '<div class="layer-col-title">Target BRD</div>' +
+          '<div class="layer-col-title">BRD đích</div>' +
           '<div class="layer-doc"><div class="layer-doc-main"><div class="layer-doc-heading">' + esc(data.target.heading) + '</div><div class="layer-doc-file">' + esc(shortPath(data.target.filePath)) + '#' + esc(data.target.slug || '') + '</div></div></div>' +
         '</div>' +
       '</div>' +
-      '<div style="font-size:11px;color:var(--text2);margin-top:8px">Will mark source doc to add <code>' + esc(data.annotationText) + '</code> or <code>' + esc(data.wikiAnnotationText) + '</code>.</div>' +
+      '<div style="font-size:11px;color:var(--text2);margin-top:8px">Sẽ đánh dấu tài liệu nguồn để thêm <code>' + esc(data.annotationText) + '</code> hoặc <code>' + esc(data.wikiAnnotationText) + '</code>.</div>' +
     '</div>';
   }
 
@@ -362,11 +362,11 @@
     resetDocRefMarkState();
     if (!docSectionQuery || !docRef) {
       status.style.color = 'var(--red)';
-      status.textContent = 'Cần điền cả PRD doc section và copied source.';
+      status.textContent = 'Cần điền cả section PRD và nguồn đã chép.';
       return;
     }
     status.style.color = 'var(--text2)';
-    status.textContent = 'Validating…';
+    status.textContent = 'Đang kiểm tra…';
     preview.innerHTML = '';
     try {
       const r = await fetch('/api/validate-doc-ref?project=' + enc(currentProject), {
@@ -377,17 +377,17 @@
       const data = await r.json();
       if (!r.ok || !data?.ok) {
         status.style.color = 'var(--red)';
-        status.textContent = data?.error || 'Doc ref validation failed.';
+        status.textContent = data?.error || 'Kiểm tra doc ref thất bại.';
         return;
       }
       pendingDocRefValidation = data;
       btn.disabled = false;
       status.style.color = 'var(--green)';
-      status.textContent = '✓ Valid: ' + data.source.heading + ' -> ' + data.target.heading;
+      status.textContent = '✓ Hợp lệ: ' + data.source.heading + ' -> ' + data.target.heading;
       preview.innerHTML = renderDocRefValidationPreview(data);
     } catch (e) {
       status.style.color = 'var(--red)';
-      status.textContent = 'Doc ref validation failed.';
+      status.textContent = 'Kiểm tra doc ref thất bại.';
     }
   }
 
@@ -396,7 +396,7 @@
     const btn = document.getElementById('manual-docref-mark-btn');
     if (!pendingDocRefValidation?.source?.id) {
       status.style.color = 'var(--red)';
-      status.textContent = 'Validate trước khi tạo mark.';
+      status.textContent = 'Kiểm tra trước khi tạo mark.';
       return;
     }
     btn.disabled = true;
@@ -413,30 +413,30 @@
       const data = await r.json();
       if (!r.ok || !data?.ok) {
         btn.disabled = false;
-        btn.textContent = 'Mark';
+        btn.textContent = 'Đánh dấu';
         status.style.color = 'var(--red)';
-        status.textContent = data?.error || 'Failed to create doc layer mark.';
+        status.textContent = data?.error || 'Tạo mark tầng tài liệu thất bại.';
         return;
       }
       status.style.color = 'var(--green)';
-      status.textContent = '✓ Marked: ' + data.source.heading + ' -> ' + data.target.heading;
+      status.textContent = '✓ Đã đánh dấu: ' + data.source.heading + ' -> ' + data.target.heading;
       btn.textContent = '✓';
       loadMarksBanner();
       doDocLayers(data.source.id);
     } catch (e) {
       btn.disabled = false;
-      btn.textContent = 'Mark';
+      btn.textContent = 'Đánh dấu';
       status.style.color = 'var(--red)';
-      status.textContent = 'Failed to create doc layer mark.';
+      status.textContent = 'Tạo mark tầng tài liệu thất bại.';
     }
   }
 
   async function loadAllLinks() {
     const el = document.getElementById('all-links-results');
-    el.innerHTML = loading('Loading links…');
+    el.innerHTML = loading('Đang tải liên kết…');
     const links = await api('/api/all-links');
-    if (!links) { el.innerHTML = errHTML('Failed to load'); return; }
-    if (!links.length) { el.innerHTML = empty('No doc→symbol links yet. Use "Suggest Links" in Coverage or add manually above.'); return; }
+    if (!links) { el.innerHTML = errHTML('Tải dữ liệu thất bại'); return; }
+    if (!links.length) { el.innerHTML = empty('Chưa có liên kết doc→symbol. Hãy dùng "Suggest Links" trong Độ phủ hoặc thêm thủ công ở trên.'); return; }
 
     // Group by doc file for readability
     const byFile = {};
@@ -447,19 +447,19 @@
     }
 
     let html = '<table class="links-table"><thead><tr>' +
-      '<th>Doc section</th><th>Symbol</th><th>Type</th><th></th>' +
+      '<th>Section tài liệu</th><th>Symbol</th><th>Loại</th><th></th>' +
       '</tr></thead><tbody>';
     for (const [file, rows] of Object.entries(byFile)) {
       html += '<tr><td colspan="4" style="padding:6px 8px 2px;color:var(--text2);font-size:10px;font-family:monospace;border-bottom:1px solid var(--border)">' + esc(shortPath(file)) + '</td></tr>';
       for (const l of rows) {
         html += '<tr>' +
           '<td><span style="color:var(--text)">' + esc(l.docHeading) + '</span>' +
-            '<button class="btn-secondary" style="padding:1px 7px;font-size:10px;margin-left:6px" data-doc-id="' + esc(l.docSectionId) + '" onclick="openDocLayers(this.dataset.docId)">Layers</button></td>' +
+            '<button class="btn-secondary" style="padding:1px 7px;font-size:10px;margin-left:6px" data-doc-id="' + esc(l.docSectionId) + '" onclick="openDocLayers(this.dataset.docId)">Tầng</button></td>' +
           '<td><span style="font-family:monospace;color:var(--accent)">' + esc(l.symbolName) + '</span>' +
             '<span style="color:var(--text2);font-size:10px;margin-left:4px">' + esc(shortPath(l.symbolFilePath)) + '</span></td>' +
           '<td><span class="link-edge-type">' + esc(l.edgeType) + '</span>' +
-            (l.isManual ? ' <span class="link-manual-badge">manual</span>' : '') + '</td>' +
-          '<td><button class="unlink-btn" data-doc-id="' + esc(l.docSectionId) + '" data-sym-id="' + esc(l.symbolId) + '" onclick="doUnlinkFromTable(this)">Unlink</button></td>' +
+            (l.isManual ? ' <span class="link-manual-badge">thủ công</span>' : '') + '</td>' +
+          '<td><button class="unlink-btn" data-doc-id="' + esc(l.docSectionId) + '" data-sym-id="' + esc(l.symbolId) + '" onclick="doUnlinkFromTable(this)">Gỡ liên kết</button></td>' +
           '</tr>';
       }
     }
@@ -486,10 +486,10 @@
     const docInput = document.getElementById('manual-link-doc').value.trim();
     const symName = document.getElementById('manual-link-sym').value.trim();
     const status = document.getElementById('manual-link-status');
-    if (!docInput || !symName) { status.style.color = 'var(--red)'; status.textContent = 'Cần điền cả doc section và symbol name.'; return; }
+    if (!docInput || !symName) { status.style.color = 'var(--red)'; status.textContent = 'Cần điền cả section tài liệu và tên symbol.'; return; }
 
     // Try to find doc section by heading search
-    status.style.color = 'var(--text2)'; status.textContent = 'Searching…';
+    status.style.color = 'var(--text2)'; status.textContent = 'Đang tìm…';
     const suggestions = await api('/api/suggest-links?name=' + enc(symName));
     let docSectionId = null;
     if (suggestions && suggestions.length) {
@@ -513,28 +513,28 @@
     const data = await r.json();
     if (data.ok) {
       status.style.color = 'var(--green)';
-      status.textContent = '✓ Linked ' + symName + ' → mark created';
+      status.textContent = '✓ Đã liên kết ' + symName + ' → đã tạo mark';
       document.getElementById('manual-link-doc').value = '';
       document.getElementById('manual-link-sym').value = '';
       loadAllLinks();
       loadMarksBanner();
     } else {
       status.style.color = 'var(--red)';
-      status.textContent = data.error || 'Failed';
+      status.textContent = data.error || 'Thất bại';
     }
   }
 
   // ── Forward Refs ──────────────────────────────────────────────────────────
   async function loadForwardRefs() {
     const el = document.getElementById('forward-refs-results');
-    el.innerHTML = loading('Scanning docs for [[forward refs]]…');
+    el.innerHTML = loading('Đang quét tài liệu để tìm [[forward refs]]…');
     const [refs, symbols] = await Promise.all([
       api('/api/forward-refs'),
       api('/api/search?q='),  // get symbol index to check which names now exist
     ]);
-    if (!refs) { el.innerHTML = errHTML('Failed to scan'); return; }
+    if (!refs) { el.innerHTML = errHTML('Quét thất bại'); return; }
     if (!refs.length) {
-      el.innerHTML = '<div class="success-box">No pending forward refs — all [[name]] patterns in docs are either linked or have matching symbols.</div>';
+      el.innerHTML = '<div class="success-box">Không còn forward ref chờ xử lý, mọi mẫu [[name]] trong tài liệu đã được liên kết hoặc đã có symbol tương ứng.</div>';
       return;
     }
 
@@ -546,14 +546,14 @@
       existsMap[name] = result && result.symbol;
     }));
 
-    let html = '<div style="font-size:11px;color:var(--text2);margin-bottom:10px">' + refs.length + ' pending forward reference' + (refs.length > 1 ? 's' : '') + '</div>';
+    let html = '<div style="font-size:11px;color:var(--text2);margin-bottom:10px">' + refs.length + ' forward reference đang chờ xử lý</div>';
     for (const ref of refs) {
       const symExists = existsMap[ref.symbolName];
       const statusHtml = symExists
-        ? '<span class="fref-status-ready">symbol found — ready</span>'
-        : '<span class="fref-status-pending">pending — symbol not yet in graph</span>';
+        ? '<span class="fref-status-ready">đã tìm thấy symbol — sẵn sàng</span>'
+        : '<span class="fref-status-pending">đang chờ — symbol chưa có trong graph</span>';
       const actionHtml = symExists
-        ? '<button class="promote-btn" data-doc-id="' + esc(ref.docSectionId) + '" data-sym-name="' + esc(ref.symbolName) + '" onclick="doPromoteForwardRef(this)">Promote →</button>'
+        ? '<button class="promote-btn" data-doc-id="' + esc(ref.docSectionId) + '" data-sym-name="' + esc(ref.symbolName) + '" onclick="doPromoteForwardRef(this)">Nâng cấp →</button>'
         : '';
       html += '<div class="fref-item">' +
         '<div class="fref-doc"><div class="fref-doc-heading">' + esc(ref.docHeading) + '</div>' +
@@ -578,13 +578,13 @@
     });
     const data = await r.json();
     if (data.ok) {
-      btn.textContent = '✓ Linked';
+      btn.textContent = '✓ Đã liên kết';
       btn.closest('.fref-item').style.opacity = '0.4';
       const statusEl = btn.previousElementSibling;
-      if (statusEl) { statusEl.className = 'fref-status-ready'; statusEl.textContent = 'linked'; }
+      if (statusEl) { statusEl.className = 'fref-status-ready'; statusEl.textContent = 'đã liên kết'; }
       loadMarksBanner();
     } else {
-      btn.textContent = '✗'; btn.disabled = false; btn.title = data.error || 'Failed';
+      btn.textContent = '✗'; btn.disabled = false; btn.title = data.error || 'Thất bại';
     }
   }
 
@@ -595,14 +595,14 @@
     if (!name) return;
     el.innerHTML = loading();
     const data = await api('/api/symbol?name=' + enc(name));
-    if (!data) { el.innerHTML = empty('Symbol "' + esc(name) + '" not found'); return; }
+    if (!data) { el.innerHTML = empty('Không tìm thấy symbol "' + esc(name) + '"'); return; }
     if (!data.linkedDocs || !data.linkedDocs.length) {
-      el.innerHTML = empty('No linked documentation found for "' + esc(name) + '"');
+      el.innerHTML = empty('Không tìm thấy tài liệu liên kết cho "' + esc(name) + '"');
       return;
     }
     const symId = data.symbol?.id;
     const symName = data.symbol?.name || name;
-    el.innerHTML = '<div class="section-title">Linked Docs (' + data.linkedDocs.length + ')</div>' +
+    el.innerHTML = '<div class="section-title">Tài liệu liên kết (' + data.linkedDocs.length + ')</div>' +
       data.linkedDocs.map(d => linkedDocCard(d, symId, symName)).join('');
   }
 
@@ -613,12 +613,12 @@
     if (!name) return;
     el.innerHTML = loading();
     const data = await api('/api/docsync?name=' + enc(name));
-    if (!data) { el.innerHTML = empty('Symbol "' + esc(name) + '" not found'); return; }
+    if (!data) { el.innerHTML = empty('Không tìm thấy symbol "' + esc(name) + '"'); return; }
 
     let html = '<div style="margin-bottom:12px">' + symbolCard(data.symbol, false) + '</div>';
 
     if (data.isSynced) {
-      html += '<div class="success-box">Documentation is in sync.</div>';
+      html += '<div class="success-box">Tài liệu đang đồng bộ.</div>';
     } else {
       html += '<div class="error-state">' +
         data.issues.map(i => esc(i)).join('<br>') +
@@ -626,7 +626,7 @@
     }
 
     if (data.linkedDocs && data.linkedDocs.length) {
-      html += '<div class="section-title" style="margin-top:16px">Linked Docs (' + data.linkedDocs.length + ')</div>' +
+      html += '<div class="section-title" style="margin-top:16px">Tài liệu liên kết (' + data.linkedDocs.length + ')</div>' +
         data.linkedDocs.map(d => docCard(d, data.symbol?.name || name)).join('');
     }
     el.innerHTML = html;
@@ -635,15 +635,15 @@
   // ── Validate Links ────────────────────────────────────────────────────────
   async function doValidateLinks() {
     const el = document.getElementById('validate-links-results');
-    el.innerHTML = loading('Checking doc links…');
+    el.innerHTML = loading('Đang kiểm tra liên kết tài liệu…');
     const data = await api('/api/validate-links');
-    if (!data) { el.innerHTML = errHTML('Check failed'); return; }
+    if (!data) { el.innerHTML = errHTML('Kiểm tra thất bại'); return; }
 
     let html = '<div class="vlinks-summary">' +
-      data.totalLinks + ' total links · ' +
+      data.totalLinks + ' tổng liên kết · ' +
       (data.staleCount > 0
         ? '<span style="color:var(--red)">' + data.staleCount + ' stale</span>'
-        : '<span style="color:var(--green)">0 stale — all good</span>') +
+        : '<span style="color:var(--green)">0 stale — mọi thứ ổn</span>') +
       '</div>';
 
     if (data.staleLinks && data.staleLinks.length) {

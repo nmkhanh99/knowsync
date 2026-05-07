@@ -18,7 +18,7 @@
     const el = document.getElementById('rules-results');
     el.innerHTML = loading();
     const data = await api('/api/mcp-config');
-    if (!data) { el.innerHTML = errHTML('Failed to load'); return; }
+    if (!data) { el.innerHTML = errHTML('Tải dữ liệu thất bại'); return; }
     rulesData = data;
     renderRulesConfig();
   }
@@ -51,19 +51,19 @@
     const filteredTotal = filteredRules.length + filteredArtifacts.length;
     const filterHtml =
       '<div class="mcp-filter-row">' +
-        '<div class="mcp-filter-box"><span class="mcp-filter-label">Language</span>' +
+        '<div class="mcp-filter-box"><span class="mcp-filter-label">Ngôn ngữ</span>' +
           '<select class="mcp-filter-select" onchange="setMcpRuleLanguage(this.value)">' +
-            '<option value="all"' + (mcpRuleLanguage === 'all' ? ' selected' : '') + '>All languages</option>' +
+            '<option value="all"' + (mcpRuleLanguage === 'all' ? ' selected' : '') + '>Tất cả ngôn ngữ</option>' +
             languages.map(l => '<option value="' + esc(l) + '"' + (mcpRuleLanguage === l ? ' selected' : '') + '>' + esc(l) + '</option>').join('') +
           '</select></div>' +
-        '<div class="mcp-filter-box"><span class="mcp-filter-label">Type</span>' +
+        '<div class="mcp-filter-box"><span class="mcp-filter-label">Loại</span>' +
           '<select class="mcp-filter-select" onchange="setMcpRuleKind(this.value)">' +
-            '<option value="all"' + (mcpRuleKind === 'all' ? ' selected' : '') + '>All types</option>' +
+            '<option value="all"' + (mcpRuleKind === 'all' ? ' selected' : '') + '>Tất cả loại</option>' +
             kinds.map(k => '<option value="' + esc(k) + '"' + (mcpRuleKind === k ? ' selected' : '') + '>' + esc(k) + '</option>').join('') +
           '</select></div>' +
-        '<div class="mcp-filter-box"><span class="mcp-filter-label">Search</span>' +
-          '<input class="mcp-filter-input" type="text" placeholder="Rule or artifact name..." value="' + esc(mcpRuleSearch) + '" oninput="setMcpRuleSearch(this.value)" /></div>' +
-        '<div class="mcp-filter-badge">' + filteredTotal + ' items</div>' +
+        '<div class="mcp-filter-box"><span class="mcp-filter-label">Tìm</span>' +
+          '<input class="mcp-filter-input" type="text" placeholder="Tên rule hoặc artifact..." value="' + esc(mcpRuleSearch) + '" oninput="setMcpRuleSearch(this.value)" /></div>' +
+        '<div class="mcp-filter-badge">' + filteredTotal + ' mục</div>' +
       '</div>';
 
     el.innerHTML =
@@ -72,7 +72,7 @@
       '<div class="mcp-section-title" style="margin-top:4px">Rules</div>' +
       filterHtml +
       renderParseRulesSection(filteredRules) +
-      '<div class="mcp-section-title" style="margin-top:24px">Grammar Artifacts</div>' +
+      '<div class="mcp-section-title" style="margin-top:24px">Grammar artifacts</div>' +
       renderParseArtifactsSection(filteredArtifacts);
   }
 
@@ -358,17 +358,17 @@
   function renderParseRulesImportSection(languages) {
     return '<div class="pr-import-box">' +
       '<div class="pr-import-title">' +
-        '⬆ Import Rules' +
+        '⬆ Import rules' +
         '<input type="text" class="pr-lang-select" id="pr-import-lang" placeholder="typescript" style="width:110px" />' +
         '<label style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:400;color:var(--text2);cursor:pointer">' +
-          '<input type="checkbox" id="pr-import-replace" /> Replace existing' +
+          '<input type="checkbox" id="pr-import-replace" /> Ghi đè hiện có' +
         '</label>' +
       '</div>' +
       '<div style="font-size:11px;color:var(--text2);margin-bottom:8px">Paste JSON hoặc chọn file .json có cấu trúc <code>{ language, rules?, queryPacks?, artifacts? }</code>. Xem Mẫu bên dưới.</div>' +
       '<textarea id="pr-import-textarea" class="pr-textarea" placeholder=\'{"language":"typescript","rules":[...]}\'></textarea>' +
       '<div class="pr-import-row">' +
         '<button class="btn-primary" style="padding:5px 14px;font-size:12px" onclick="doPrImport()">Import</button>' +
-        '<button class="btn-secondary" style="padding:5px 14px;font-size:12px" onclick="doPrValidateImport(this)">Validate</button>' +
+        '<button class="btn-secondary" style="padding:5px 14px;font-size:12px" onclick="doPrValidateImport(this)">Kiểm tra</button>' +
         '<label class="btn-secondary" style="padding:5px 14px;font-size:12px;cursor:pointer">📂 File<input type="file" accept=".json" style="display:none" onchange="doPrImportFile(this)"></label>' +
         '<span id="pr-import-status" style="font-size:11px;margin-left:6px;min-height:16px"></span>' +
       '</div>' +
@@ -451,14 +451,14 @@
     // Override language and replace from dropdowns if not set
     if (!payload.language) payload.language = document.getElementById('pr-import-lang').value;
     if (document.getElementById('pr-import-replace').checked) payload.replace = true;
-    status.style.color = 'var(--text2)'; status.textContent = 'Importing…';
+    status.style.color = 'var(--text2)'; status.textContent = 'Đang import…';
     const r = await fetch('/api/provide-parse-rules?project=' + enc(currentProject), {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
     });
     const data = await r.json();
     if (data.ok) {
       status.style.color = 'var(--green)';
-      status.textContent = '✓ ' + data.added + ' rules' + (data.artifactsAdded ? ' + ' + data.artifactsAdded + ' artifacts' : '') + ' imported (total: ' + data.total + ')';
+      status.textContent = '✓ Đã import ' + data.added + ' rules' + (data.artifactsAdded ? ' + ' + data.artifactsAdded + ' artifacts' : '') + ' (tổng: ' + data.total + ')';
       document.getElementById('pr-import-textarea').value = '';
       resetParseRulesState();
       // If imported from within a RuleSet context, assign rules to that set
@@ -471,7 +471,7 @@
         await selectRuleSet(targetSetId);
       }
     } else {
-      status.style.color = 'var(--red)'; status.textContent = data.error || 'Import failed';
+      status.style.color = 'var(--red)'; status.textContent = data.error || 'Import thất bại';
     }
   }
 
@@ -507,20 +507,20 @@
     try { payload = JSON.parse(raw); } catch (e) { status.style.color = 'var(--red)'; status.textContent = 'JSON không hợp lệ: ' + e.message; return; }
     if (!payload.language) { status.style.color = 'var(--red)'; status.textContent = 'Thiếu trường "language"'; return; }
     btnEl.disabled = true; btnEl.textContent = '…';
-    status.style.color = 'var(--text2)'; status.textContent = 'Validating…';
-    if (resultEl) resultEl.innerHTML = loading('Running against up to 3 files…');
+    status.style.color = 'var(--text2)'; status.textContent = 'Đang kiểm tra…';
+    if (resultEl) resultEl.innerHTML = loading('Đang chạy trên tối đa 3 file…');
     const r = await fetch('/api/validate-parse-rules?project=' + enc(currentProject), {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ language: payload.language, rules: payload.rules, queryPacks: payload.queryPacks, artifacts: payload.artifacts }),
     });
     const data = await r.json();
-    btnEl.disabled = false; btnEl.textContent = 'Validate';
+    btnEl.disabled = false; btnEl.textContent = 'Kiểm tra';
     if (data.error) {
       status.style.color = 'var(--red)'; status.textContent = data.error;
       if (resultEl) resultEl.innerHTML = '';
       return;
     }
-    status.style.color = 'var(--text2)'; status.textContent = data.filesPreviewed + ' file(s) previewed';
+    status.style.color = 'var(--text2)'; status.textContent = 'Đã xem trước ' + data.filesPreviewed + ' file';
     if (!resultEl) return;
     let html = '';
     for (const preview of (data.previews || [])) {
@@ -552,11 +552,11 @@
               (m.captures[0] ? ' · first: <code>' + esc(m.captures[0].text.slice(0, 40)) + '</code>' : '') +
             '</div>';
           }
-          if (preview.matchDetails.length > 6) html += '<div class="pr-validate-match" style="color:var(--text2)">…+' + (preview.matchDetails.length - 6) + ' more matches</div>';
+          if (preview.matchDetails.length > 6) html += '<div class="pr-validate-match" style="color:var(--text2)">…+' + (preview.matchDetails.length - 6) + ' match khác</div>';
           html += '</div>';
         }
         if (!hasErrors && (!preview.matchDetails || !preview.matchDetails.length)) {
-          html += '<div style="font-size:11px;color:var(--text2)">No query errors. ' + preview.symbolCount + ' symbols extracted.</div>';
+          html += '<div style="font-size:11px;color:var(--text2)">Không có lỗi query. Đã trích xuất ' + preview.symbolCount + ' symbol.</div>';
         }
         html += '</div>';
       }
@@ -571,17 +571,17 @@
     let resultEl = document.getElementById(resultId);
     if (!resultEl) return;
     btnEl.disabled = true; btnEl.textContent = '…';
-    resultEl.innerHTML = loading('Running against up to 3 files…');
+    resultEl.innerHTML = loading('Đang chạy trên tối đa 3 file…');
     const r = await fetch('/api/validate-parse-rules?project=' + enc(currentProject), {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ language }),
     });
     const data = await r.json();
-    btnEl.disabled = false; btnEl.textContent = 'Validate';
+    btnEl.disabled = false; btnEl.textContent = 'Kiểm tra';
     if (data.error) { resultEl.innerHTML = '<div class="pr-validate-error">' + esc(data.error) + '</div>'; return; }
 
     let html = '<div style="font-size:11px;color:var(--text2);margin-bottom:8px">' +
-      data.filesPreviewed + ' file' + (data.filesPreviewed !== 1 ? 's' : '') + ' previewed</div>';
+      'Đã xem trước ' + data.filesPreviewed + ' file</div>';
 
     for (const preview of (data.previews || [])) {
       const hasErrors = preview.queryErrors && preview.queryErrors.length;
@@ -612,11 +612,11 @@
               (m.captures[0] ? ' · first: <code>' + esc(m.captures[0].text.slice(0, 40)) + '</code>' : '') +
             '</div>';
           }
-          if (preview.matchDetails.length > 6) html += '<div class="pr-validate-match" style="color:var(--text2)">…+' + (preview.matchDetails.length - 6) + ' more matches</div>';
+          if (preview.matchDetails.length > 6) html += '<div class="pr-validate-match" style="color:var(--text2)">…+' + (preview.matchDetails.length - 6) + ' match khác</div>';
           html += '</div>';
         }
         if (!hasErrors && (!preview.matchDetails || !preview.matchDetails.length)) {
-          html += '<div style="font-size:11px;color:var(--text2)">No query errors. ' + preview.symbolCount + ' symbols extracted.</div>';
+          html += '<div style="font-size:11px;color:var(--text2)">Không có lỗi query. Đã trích xuất ' + preview.symbolCount + ' symbol.</div>';
         }
         html += '</div>';
       }
@@ -726,7 +726,7 @@
       if (!grouped.has(rule.language)) grouped.set(rule.language, []);
       grouped.get(rule.language).push(rule);
     }
-    if (!grouped.size) return '<div class="mcp-empty">No parse rules stored for this project.</div>';
+    if (!grouped.size) return '<div class="mcp-empty">Chưa có parse rules nào được lưu cho dự án này.</div>';
 
     return Array.from(grouped.entries()).sort((a, b) => a[0].localeCompare(b[0])).map(([language, group]) => {
       const sorted = group.sort((a, b) => (b.priority || 0) - (a.priority || 0) || a.name.localeCompare(b.name));
@@ -759,7 +759,7 @@
             '<button class="btn-secondary' + (viewMode === 'json' ? ' active' : '') + '" style="padding:3px 10px;font-size:11px" ' +
               'onclick="togglePrGroupView(\'' + esc(language) + '\')">' + (viewMode === 'json' ? 'Cards' : 'JSON') + '</button>' +
             '<button class="btn-secondary" style="padding:3px 10px;font-size:11px" ' +
-              'onclick="doValidateParseRules(\'' + esc(language) + '\',this)">Test stored</button>' +
+              'onclick="doValidateParseRules(\'' + esc(language) + '\',this)">Kiểm tra bản lưu</button>' +
           '</div>' +
         '</div>' +
         contentHtml +
@@ -777,7 +777,7 @@
       if (!grouped.has(artifact.language)) grouped.set(artifact.language, []);
       grouped.get(artifact.language).push(artifact);
     }
-    if (!grouped.size) return '<div class="mcp-empty">No grammar artifacts stored for this project.</div>';
+    if (!grouped.size) return '<div class="mcp-empty">Chưa có grammar artifact nào được lưu cho dự án này.</div>';
 
     return Array.from(grouped.entries()).sort((a, b) => a[0].localeCompare(b[0])).map(([language, group]) => {
       const artifactCards = group

@@ -20,6 +20,7 @@ import { suggestDocLinks } from '../mcp/tools/suggest-doc-links.js';
 import { createDocLink } from '../mcp/tools/create-doc-link.js';
 import { validateLinks } from '../mcp/tools/validate-links.js';
 import type { RegisteredProject } from '../cli/registry.js';
+import { resolveArchitectureExportRequest } from './architecture-export.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -130,9 +131,14 @@ function findDocSectionByQuery(db: GraphDB, query: string) {
 }
 
 /**
- * KnowSync functional handler. Automatically synced via CLI Validation rule.
+ * Hosts the primary UI boundary for architecture surfaces, dashboard-style health,
+ * and operational freshness entry points.
  * @doc:../../docs/architecture/07-7-viz-server-20-endpoints.md#7-viz-server-43-routes
  * @doc:../../docs/architecture/09-9-web-ui-8-tabs.md#9-web-ui-8-tabs
+ * @doc:../../docs/requirements/frd-architecture-surfaces-and-freshness.md#frd-func-010-diagram-generation-va-architecture-surface-delivery
+ *
+ * FRD-FUNC-010: architecture surface delivery through the Web UI.
+ * PRD-OPS-002: knowledge health dashboard surface.
  */
 export async function startVizServer(initialProjects: ProjectEntry[], port: number): Promise<void> {
   const projects: ProjectEntry[] = [...initialProjects];
@@ -743,6 +749,22 @@ export async function startVizServer(initialProjects: ProjectEntry[], port: numb
     } catch (e) { res.status(500).json({ error: String(e) }); }
   });
 
+  app.get('/api/architecture-export', (req, res) => {
+    const db = resolveDb(req);
+    if (!db) { err404(res); return; }
+    try {
+      const result = resolveArchitectureExportRequest(db, {
+        format: String(req.query['format'] ?? 'mermaid'),
+        viewType: String(req.query['viewType'] ?? 'component'),
+        docSectionId: String(req.query['docSectionId'] ?? '').trim() || undefined,
+        docSectionIds: String(req.query['docSectionIds'] ?? '').trim() || undefined,
+        focusDocId: String(req.query['focusDocId'] ?? '').trim() || undefined,
+        includeCodeContext: String(req.query['includeCodeContext'] ?? '0'),
+      });
+      res.status(result.status).json(result.body);
+    } catch (e) { res.status(500).json({ error: String(e) }); }
+  });
+
   // ─── Scan doc sources ─────────────────────────────────────────────────────
   app.get('/api/doc-sources/scan', (req, res) => {
     const db = resolveDb(req);
@@ -783,6 +805,14 @@ export async function startVizServer(initialProjects: ProjectEntry[], port: numb
         return db.getLinkedDocs(s.id).length === 0;
       });
       res.json({ total: undocumented.length, undocumented });
+    } catch (e) { res.status(500).json({ error: String(e) }); }
+  });
+
+  app.get('/api/health-dashboard', (req, res) => {
+    const db = resolveDb(req);
+    if (!db) { err404(res); return; }
+    try {
+      res.json(db.getHealthDashboard());
     } catch (e) { res.status(500).json({ error: String(e) }); }
   });
 
@@ -1162,12 +1192,19 @@ export async function startVizServer(initialProjects: ProjectEntry[], port: numb
     res.sendFile(join(__dirname, 'public', 'index.html'));
   });
 
-  app.listen(port, () => {
+  const host = '127.0.0.1';
+  const server = app.listen(port, host);
+  server.once('listening', () => {
     const url = `http://localhost:${port}`;
     console.log(`  KnowSync UI → ${url}`);
     console.log(`  Projects: ${projects.map((p) => p.name).join(', ')}`);
     try { execSync(`open "${url}"`); } catch { /* non-macOS */ }
   });
-
-  await new Promise(() => { });
+  await new Promise<void>((resolve, reject) => {
+    server.once('close', resolve);
+    server.once('error', (error) => {
+      const message = error instanceof Error ? error.message : String(error);
+      reject(new Error(`Failed to start KnowSync UI on ${host}:${port}: ${message}`));
+    });
+  });
 }

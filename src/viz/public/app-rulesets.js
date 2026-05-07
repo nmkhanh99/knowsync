@@ -48,12 +48,12 @@
   async function loadRuleSets() {
     if (!currentProject) return;
     const el = document.getElementById('rs-tree');
-    el.innerHTML = loading('Loading RuleSets…');
+    el.innerHTML = loading('Đang tải RuleSet…');
     const lang = document.getElementById('rs-lang-filter')?.value || '';
     const url = '/api/rule-sets' + (lang ? '?language=' + enc(lang) : '');
     const result = await fetchJsonWithError(url);
     if (!result.ok) {
-      el.innerHTML = errHTML('RuleSets load failed: ' + esc(result.error));
+      el.innerHTML = errHTML('Tải RuleSet thất bại: ' + esc(result.error));
       return;
     }
     rsAllSets = Array.isArray(result.data) ? result.data : (Array.isArray(result.data?.ruleSets) ? result.data.ruleSets : []);
@@ -115,7 +115,7 @@
     const welcome = document.getElementById('rs-welcome');
     el.style.display = 'flex';
     welcome.style.display = 'none';
-    el.innerHTML = loading('Loading…');
+    el.innerHTML = loading('Đang tải…');
     rsNewForm = false;
     const result = await fetchJsonWithError('/api/rule-sets/' + enc(id));
     if (!result.ok) { el.innerHTML = errHTML('RuleSet detail failed: ' + esc(result.error)); return; }
@@ -151,7 +151,7 @@
         '<span class="rs-chain-item rs-chain-current">' + esc(s.name) + '</span>' +
       '</div>';
     } else {
-      chainHtml = '<span class="rs-chain-item rs-chain-current">' + esc(s.name) + '</span><span style="font-size:11px;color:var(--text2);margin-left:6px">(no parent)</span>';
+      chainHtml = '<span class="rs-chain-item rs-chain-current">' + esc(s.name) + '</span><span style="font-size:11px;color:var(--text2);margin-left:6px">(không có cha)</span>';
     }
 
     // Build links HTML
@@ -166,7 +166,7 @@
             '<button class="btn-danger" style="margin-left:auto;padding:1px 8px;font-size:10px;width:auto" onclick="doDeleteLink(\'' + esc(l.id) + '\')">✕</button>' +
           '</div>';
         }).join('')
-      : '<div class="rs-empty">No dependency links.</div>';
+      : '<div class="rs-empty">Không có liên kết phụ thuộc.</div>';
 
     // Merge children
     const childrenHtml = children.length
@@ -209,26 +209,26 @@
         '<div class="rs-panel-actions">' +
           '<button class="btn-secondary" style="padding:4px 10px;font-size:11px" onclick="openEditRsForm()">✎ Edit</button>' +
           '<button class="btn-secondary" style="padding:4px 10px;font-size:11px" onclick="doForkRuleSet(\'' + esc(s.id) + '\')">⑂ Fork</button>' +
-          '<button class="btn-secondary" style="padding:4px 10px;font-size:11px" onclick="openAddLinkForm(\'' + esc(s.id) + '\')">⬡ Add Link</button>' +
+          '<button class="btn-secondary" style="padding:4px 10px;font-size:11px" onclick="openAddLinkForm(\'' + esc(s.id) + '\')">⬡ Thêm link</button>' +
           '<button class="btn-secondary" style="padding:4px 10px;font-size:11px" onclick="openImportToSet(\'' + esc(s.id) + '\')">⬆ Import</button>' +
           '<button class="btn-danger" style="padding:4px 10px;font-size:11px;width:auto;margin-top:0" onclick="doDeleteRuleSet(\'' + esc(s.id) + '\')">Delete</button>' +
         '</div>' +
       '</div>' +
       '<div class="rs-panel-body">' +
         '<div class="rs-section">' +
-          '<div class="rs-section-title">Inheritance Chain</div>' +
+          '<div class="rs-section-title">Chuỗi kế thừa</div>' +
           chainHtml +
           (children.length ? '<div style="margin-top:6px;font-size:11px;color:var(--text2)">Children: ' + childrenHtml + '</div>' : '') +
         '</div>' +
         '<div class="rs-section">' +
-          '<div class="rs-section-title">Description' +
+          '<div class="rs-section-title">Mô tả' +
             (s.description ? '' : ' <span style="font-size:10px;color:var(--text2)">(none)</span>') +
           '</div>' +
           (s.description ? '<div style="font-size:12px;color:var(--text2);line-height:1.6">' + esc(s.description) + '</div>' : '') +
           (s.grammarWasmUrl ? '<div style="font-size:11px;color:var(--text2);margin-top:6px">Grammar WASM: <code>' + esc(s.grammarWasmUrl) + '</code></div>' : '') +
         '</div>' +
         '<div class="rs-section">' +
-          '<div class="rs-section-title">Dependency Links <span style="font-size:10px">' + links.length + '</span></div>' +
+          '<div class="rs-section-title">Link phụ thuộc <span style="font-size:10px">' + links.length + '</span></div>' +
           '<div class="rs-links-list">' + linksHtml + '</div>' +
         '</div>' +
         '<div class="rs-section">' +
@@ -253,7 +253,7 @@
     document.querySelectorAll('.rs-item').forEach(i => i.classList.remove('active'));
     el.innerHTML =
       '<div class="rs-form" style="margin:20px">' +
-        '<div class="rs-form-title">+ New RuleSet</div>' +
+        '<div class="rs-form-title">+ RuleSet mới</div>' +
         '<div class="rs-form-row"><label class="rs-form-label">Name</label><input id="rsf-name" class="rs-form-input" placeholder="My TypeScript Rules" /></div>' +
         '<div class="rs-form-row"><label class="rs-form-label">Language</label>' +
           '<select id="rsf-lang" class="rs-form-input">' +
@@ -262,9 +262,9 @@
             '<option value="python">Python</option>' +
           '</select>' +
         '</div>' +
-        '<div class="rs-form-row"><label class="rs-form-label">Description</label><input id="rsf-desc" class="rs-form-input" placeholder="Optional description" /></div>' +
+        '<div class="rs-form-row"><label class="rs-form-label">Description</label><input id="rsf-desc" class="rs-form-input" placeholder="Mô tả tùy chọn" /></div>' +
         '<div class="rs-form-row"><label class="rs-form-label">Version</label><input id="rsf-ver" class="rs-form-input" value="1.0.0" /></div>' +
-        '<div class="rs-form-row"><label class="rs-form-label">Parent RuleSet (inherit from)</label>' +
+        '<div class="rs-form-row"><label class="rs-form-label">RuleSet cha (kế thừa từ)</label>' +
           '<select id="rsf-parent" class="rs-form-input">' +
             '<option value="">— None —</option>' +
             rsAllSets.map(s => '<option value="' + esc(s.id) + '">' + esc(s.name) + ' (' + esc(s.language) + ')</option>').join('') +
@@ -272,12 +272,12 @@
         '</div>' +
         '<div class="rs-form-row"><label class="rs-form-label">Grammar WASM URL</label><input id="rsf-wasm" class="rs-form-input" placeholder="https://… (optional)" /></div>' +
         '<div class="rs-form-row" style="flex-direction:row;align-items:center;gap:8px">' +
-          '<input type="checkbox" id="rsf-global" /><label class="rs-form-label" for="rsf-global" style="text-transform:none;font-size:12px">Global (shared across all projects)</label>' +
+          '<input type="checkbox" id="rsf-global" /><label class="rs-form-label" for="rsf-global" style="text-transform:none;font-size:12px">Global (dùng chung cho mọi dự án)</label>' +
         '</div>' +
         '<div id="rsf-msg"></div>' +
         '<div class="rs-form-actions">' +
-          '<button class="btn-primary" style="padding:6px 16px;font-size:12px" onclick="doCreateRuleSet()">Create</button>' +
-          '<button class="btn-secondary" style="padding:6px 12px;font-size:12px" onclick="cancelRsForm()">Cancel</button>' +
+          '<button class="btn-primary" style="padding:6px 16px;font-size:12px" onclick="doCreateRuleSet()">Tạo</button>' +
+          '<button class="btn-secondary" style="padding:6px 12px;font-size:12px" onclick="cancelRsForm()">Hủy</button>' +
         '</div>' +
       '</div>';
   }
@@ -291,7 +291,7 @@
     const el = document.getElementById('rs-panel');
     el.innerHTML =
       '<div class="rs-form" style="margin:20px">' +
-        '<div class="rs-form-title">✎ Edit: ' + esc(s.name) + '</div>' +
+        '<div class="rs-form-title">✎ Sửa: ' + esc(s.name) + '</div>' +
         '<div class="rs-form-row"><label class="rs-form-label">Name</label><input id="rsf-name" class="rs-form-input" value="' + esc(s.name) + '" /></div>' +
         '<div class="rs-form-row"><label class="rs-form-label">Description</label><input id="rsf-desc" class="rs-form-input" value="' + esc(s.description) + '" /></div>' +
         '<div class="rs-form-row"><label class="rs-form-label">Version</label><input id="rsf-ver" class="rs-form-input" value="' + esc(s.version) + '" /></div>' +
@@ -305,7 +305,7 @@
         '<div id="rsf-msg"></div>' +
         '<div class="rs-form-actions">' +
           '<button class="btn-primary" style="padding:6px 16px;font-size:12px" onclick="doUpdateRuleSet(\'' + esc(s.id) + '\')">Save</button>' +
-          '<button class="btn-secondary" style="padding:6px 12px;font-size:12px" onclick="selectRuleSet(\'' + esc(s.id) + '\')">Cancel</button>' +
+          '<button class="btn-secondary" style="padding:6px 12px;font-size:12px" onclick="selectRuleSet(\'' + esc(s.id) + '\')">Hủy</button>' +
         '</div>' +
       '</div>';
   }
@@ -329,7 +329,7 @@
     const language = document.getElementById('rsf-lang')?.value;
     const msg = document.getElementById('rsf-msg');
     if (!name) { msg.innerHTML = errHTML('Tên không được trống'); return; }
-    msg.innerHTML = loading('Creating…');
+    msg.innerHTML = loading('Đang tạo…');
     const r = await fetch('/api/rule-sets?project=' + enc(currentProject), {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -343,7 +343,7 @@
       }),
     });
     const data = await r.json();
-    if (!r.ok) { msg.innerHTML = errHTML(data.error || 'Failed'); return; }
+    if (!r.ok) { msg.innerHTML = errHTML(data.error || 'Thất bại'); return; }
     await loadRuleSets();
     await selectRuleSet(data.id);
   }
@@ -353,7 +353,7 @@
    */
   async function doUpdateRuleSet(id) {
     const msg = document.getElementById('rsf-msg');
-    msg.innerHTML = loading('Saving…');
+    msg.innerHTML = loading('Đang lưu…');
     const r = await fetch('/api/rule-sets/' + enc(id) + '?project=' + enc(currentProject), {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -365,7 +365,7 @@
       }),
     });
     const data = await r.json();
-    if (!r.ok) { msg.innerHTML = errHTML(data.error || 'Failed'); return; }
+    if (!r.ok) { msg.innerHTML = errHTML(data.error || 'Thất bại'); return; }
     await loadRuleSets();
     await selectRuleSet(id);
   }
@@ -376,7 +376,7 @@
   async function doDeleteRuleSet(id) {
     if (!confirm('Xóa RuleSet này? Rules bên trong sẽ không bị xóa nhưng mất liên kết.')) return;
     const r = await fetch('/api/rule-sets/' + enc(id) + '?project=' + enc(currentProject), { method: 'DELETE' });
-    if (!r.ok) { alert('Failed'); return; }
+    if (!r.ok) { alert('Thất bại'); return; }
     rsSelected = null;
     const panel = document.getElementById('rs-panel');
     panel.style.display = 'none';
@@ -395,7 +395,7 @@
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }),
     });
     const data = await r.json();
-    if (!r.ok) { alert(data.error || 'Fork failed'); return; }
+    if (!r.ok) { alert(data.error || 'Fork thất bại'); return; }
     await loadRuleSets();
     await selectRuleSet(data.id);
   }
@@ -407,28 +407,28 @@
     const el = document.getElementById('rs-panel');
     el.innerHTML =
       '<div class="rs-form" style="margin:20px">' +
-        '<div class="rs-form-title">⬡ Add Dependency Link</div>' +
-        '<div class="rs-form-row"><label class="rs-form-label">Source RuleSet</label>' +
+        '<div class="rs-form-title">⬡ Thêm liên kết phụ thuộc</div>' +
+        '<div class="rs-form-row"><label class="rs-form-label">RuleSet nguồn</label>' +
           '<select id="rsl-source" class="rs-form-input">' +
             rsAllSets.map(s => '<option value="' + esc(s.id) + '"' + (s.id === sourceId ? ' selected' : '') + '>' + esc(s.name) + '</option>').join('') +
           '</select>' +
         '</div>' +
-        '<div class="rs-form-row"><label class="rs-form-label">Link Type</label>' +
+        '<div class="rs-form-row"><label class="rs-form-label">Loại liên kết</label>' +
           '<select id="rsl-type" class="rs-form-input">' +
             '<option value="inherit">inherit — áp dụng rules của target trước, source override</option>' +
             '<option value="override">override — source hoàn toàn thay thế target</option>' +
             '<option value="inject">inject — inject rules của target vào source</option>' +
           '</select>' +
         '</div>' +
-        '<div class="rs-form-row"><label class="rs-form-label">Target RuleSet</label>' +
+        '<div class="rs-form-row"><label class="rs-form-label">RuleSet đích</label>' +
           '<select id="rsl-target" class="rs-form-input">' +
             rsAllSets.filter(s => s.id !== sourceId).map(s => '<option value="' + esc(s.id) + '">' + esc(s.name) + ' (' + esc(s.language) + ')</option>').join('') +
           '</select>' +
         '</div>' +
         '<div id="rsl-msg"></div>' +
         '<div class="rs-form-actions">' +
-          '<button class="btn-primary" style="padding:6px 16px;font-size:12px" onclick="doCreateLink()">Add Link</button>' +
-          '<button class="btn-secondary" style="padding:6px 12px;font-size:12px" onclick="selectRuleSet(\'' + esc(sourceId) + '\')">Cancel</button>' +
+          '<button class="btn-primary" style="padding:6px 16px;font-size:12px" onclick="doCreateLink()">Thêm liên kết</button>' +
+          '<button class="btn-secondary" style="padding:6px 12px;font-size:12px" onclick="selectRuleSet(\'' + esc(sourceId) + '\')">Hủy</button>' +
         '</div>' +
       '</div>';
   }
@@ -442,13 +442,13 @@
     const targetId = document.getElementById('rsl-target')?.value;
     const linkType = document.getElementById('rsl-type')?.value;
     if (sourceId === targetId) { msg.innerHTML = errHTML('Source và target không được giống nhau'); return; }
-    msg.innerHTML = loading('Adding…');
+    msg.innerHTML = loading('Đang thêm…');
     const r = await fetch('/api/rule-links?project=' + enc(currentProject), {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sourceId, targetId, linkType }),
     });
     const data = await r.json();
-    if (!r.ok) { msg.innerHTML = errHTML(data.error || 'Failed'); return; }
+    if (!r.ok) { msg.innerHTML = errHTML(data.error || 'Thất bại'); return; }
     await selectRuleSet(sourceId);
   }
 
@@ -457,7 +457,7 @@
    */
   async function doDeleteLink(linkId) {
     const r = await fetch('/api/rule-links/' + enc(linkId) + '?project=' + enc(currentProject), { method: 'DELETE' });
-    if (!r.ok) { alert('Failed'); return; }
+    if (!r.ok) { alert('Thất bại'); return; }
     if (rsSelected) await selectRuleSet(rsSelected.id);
   }
 

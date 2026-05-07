@@ -106,7 +106,23 @@ export function getDocFlowTrace(
 function resolveDocSection(db: GraphDB, query: string): DocSection | null {
   const trimmed = query.trim();
   if (!trimmed) return null;
-  let section = trimmed.startsWith('doc:') ? db.getDocSectionById(trimmed) : null;
+  let section: DocSection | null = db.getDocSectionById(trimmed);
+  if (section) return section;
+  if (trimmed.startsWith('doc:')) {
+    const target = trimmed.slice(4).trim();
+    if (!target) return null;
+    section = db.getDocSectionById(target);
+    if (section) return section;
+    const hashIndex = target.lastIndexOf('#');
+    if (hashIndex > 0) {
+      const filePath = target.slice(0, hashIndex);
+      const slug = target.slice(hashIndex + 1);
+      if (filePath && slug) {
+        section = db.getDocSectionByPathAndSlug(filePath, slug);
+        if (section) return section;
+      }
+    }
+  }
   if (section) return section;
   const hits = db.searchDocs(trimmed, 10);
   return hits.find((item) => item.heading.toLowerCase() === trimmed.toLowerCase()) ?? hits[0] ?? null;

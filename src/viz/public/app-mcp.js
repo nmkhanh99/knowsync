@@ -27,7 +27,7 @@
     const el = document.getElementById('mcp-results');
     el.innerHTML = loading();
     const data = await api('/api/mcp-config');
-    if (!data) { el.innerHTML = errHTML('Failed to load MCP config'); return; }
+    if (!data) { el.innerHTML = errHTML('Tải cấu hình MCP thất bại'); return; }
     mcpData = data;
     renderMcpConfig();
   }
@@ -65,14 +65,14 @@
       (!search || (artifact.name || '').toLowerCase().includes(search))
     );
     el.innerHTML =
-      '<div class="mcp-section-title">Client Config</div>' +
+      '<div class="mcp-section-title">Cấu hình client</div>' +
       '<div class="mcp-path-row"><span class="mcp-path-label">CLI</span><span class="mcp-path-val" title="' + esc(mcpData.cliPath) + '">' + esc(mcpData.cliPath) + '</span></div>' +
-      '<div class="mcp-path-row"><span class="mcp-path-label">Project</span><span class="mcp-path-val" title="' + esc(mcpData.projectPath) + '">' + esc(mcpData.projectPath) + '</span></div>' +
+      '<div class="mcp-path-row"><span class="mcp-path-label">Dự án</span><span class="mcp-path-val" title="' + esc(mcpData.projectPath) + '">' + esc(mcpData.projectPath) + '</span></div>' +
       '<div class="mcp-tool-tabs">' +
         Object.entries(configs).map(([k, v]) =>
           '<button class="mcp-tool-btn' + (k === mcpActiveTool ? ' active' : '') + '" onclick="switchMcpTool(\'' + k + '\')">' + v.label + '</button>'
         ).join('') +
       '</div>' +
       '<div style="font-size:11px;color:var(--text2);margin-bottom:8px">File: <code>' + esc(active.file) + '</code></div>' +
-      '<div class="mcp-code-block"><button class="mcp-copy-btn" onclick="copyText(' + "'" + json.replace(/'/g, "\\'") + "'" + ')">Copy</button>' + esc(json) + '</div>';
+      '<div class="mcp-code-block"><button class="mcp-copy-btn" onclick="copyText(' + "'" + json.replace(/'/g, "\\'") + "'" + ')">Chép</button>' + esc(json) + '</div>';
   }

@@ -83,7 +83,7 @@
     const docCount = structured.docNodes.filter((node) => node.type === 'DocSection').length;
     const groupCount = structured.docNodes.filter((node) => node.type === 'DocFile' && node.groupKind === 'docSource').length;
     const modeLabel = { docSource: 'by doc source', folder: 'by folder', file: 'by file', flat: 'flat' }[config.structureMode] || config.structureMode;
-    stats.textContent = modeLabel + ' · ' + (groupCount || structured.docNodes.filter(n => n.type === 'DocFile').length) + ' groups · ' + docCount + ' sections';
+    stats.textContent = modeLabel + ' · ' + (groupCount || structured.docNodes.filter(n => n.type === 'DocFile').length) + ' nhóm · ' + docCount + ' section';
   }
 
   /**
@@ -204,7 +204,7 @@
     navigator.clipboard.writeText(text).then(() => {
       if (!btn) return;
       const prev = btn.textContent;
-      btn.textContent = 'Copied';
+      btn.textContent = 'Đã chép';
       setTimeout(() => { btn.textContent = prev; }, 900);
     }).catch(() => {});
   }
@@ -331,14 +331,14 @@
    * Auto-documented structural element.
    */
   function vdocsDisplayType(node) {
-    if (!node) return 'Unknown';
+    if (!node) return 'Không rõ';
     if (node.type === 'DocFile') {
-      if (node.groupKind === 'docSource') return 'Doc Source';
-      if (node.groupKind === 'folder') return 'Folder Group';
-      if (node.groupKind === 'file') return 'Document File';
-      if (node.groupKind === 'flat') return 'Flat Group';
+      if (node.groupKind === 'docSource') return 'Nguồn tài liệu';
+      if (node.groupKind === 'folder') return 'Nhóm thư mục';
+      if (node.groupKind === 'file') return 'File tài liệu';
+      if (node.groupKind === 'flat') return 'Nhóm phẳng';
     }
-    if (node.type === 'EmbeddedDocRegion') return 'Embedded Doc Region';
+    if (node.type === 'EmbeddedDocRegion') return 'Vùng tài liệu nhúng';
     return node.type;
   }
 
@@ -346,7 +346,7 @@
    * Auto-documented structural element.
    */
   function renderVdocsPreview(node) {
-    if (!node) return '<div class="vdocs-outline-empty">Select a document node to preview.</div>';
+    if (!node) return '<div class="vdocs-outline-empty">Chọn một node tài liệu để xem trước.</div>';
     const sectionNodes = resolveVdocsScopeSections(node.id);
     const isGroupingNode = node.type === 'DocFile' && (node.groupKind === 'docSource' || node.groupKind === 'folder' || node.groupKind === 'flat');
     const isAggregatedContentNode =
@@ -355,20 +355,20 @@
       (node.type === 'DocSection' && sectionNodes.length > 1);
     const previewContent = isGroupingNode ? '' : aggregatedVdocsContent(node, sectionNodes);
     const mdHtml = isGroupingNode
-      ? '<div class="vdocs-outline-empty">Group node has no own content. Open a document file or section below to read content.</div>'
+      ? '<div class="vdocs-outline-empty">Node nhóm không có nội dung riêng. Hãy mở file hoặc section tài liệu bên dưới để đọc nội dung.</div>'
       : (previewContent
         ? ((typeof marked !== 'undefined') ? marked.parse(previewContent) : '<pre>' + esc(previewContent) + '</pre>')
-        : '<div class="vdocs-outline-empty">No Markdown content for this node.</div>');
-    let metaHtml = '<div class="panel-row"><span class="pl">Type</span><span class="pv">' + badge(vdocsDisplayType(node)) + '</span></div>' +
+        : '<div class="vdocs-outline-empty">Node này không có nội dung Markdown.</div>');
+    let metaHtml = '<div class="panel-row"><span class="pl">Loại</span><span class="pv">' + badge(vdocsDisplayType(node)) + '</span></div>' +
       '<div class="panel-row"><span class="pl">File</span><span class="pv pv-file">' + esc(shortPath(node.file || '')) + '</span></div>' +
-      '<div class="panel-row"><span class="pl">Lines</span><span class="pv">' + (node.startLine || 1) + '–' + (node.endLine || 1) + '</span></div>';
+      '<div class="panel-row"><span class="pl">Dòng</span><span class="pv">' + (node.startLine || 1) + '–' + (node.endLine || 1) + '</span></div>';
     if (isAggregatedContentNode && sectionNodes.length > 1) {
-      metaHtml += '<div class="panel-row"><span class="pl">Content Scope</span><span class="pv">Aggregated from ' + sectionNodes.length + ' section' + (sectionNodes.length === 1 ? '' : 's') + '</span></div>';
+      metaHtml += '<div class="panel-row"><span class="pl">Phạm vi nội dung</span><span class="pv">Tổng hợp từ ' + sectionNodes.length + ' section</span></div>';
     } else if (isGroupingNode) {
-      metaHtml += '<div class="panel-row"><span class="pl">Scope</span><span class="pv">' + sectionNodes.length + ' section' + (sectionNodes.length === 1 ? '' : 's') + ' in this group</span></div>';
+      metaHtml += '<div class="panel-row"><span class="pl">Phạm vi</span><span class="pv">' + sectionNodes.length + ' section trong nhóm này</span></div>';
     }
     if (node.path && node.path.length) {
-      metaHtml += '<div class="panel-row"><span class="pl">Breadcrumb</span><span class="pv" style="font-family:monospace;font-size:11px">' + esc(node.path.join(' / ')) + '</span></div>';
+      metaHtml += '<div class="panel-row"><span class="pl">Đường dẫn</span><span class="pv" style="font-family:monospace;font-size:11px">' + esc(node.path.join(' / ')) + '</span></div>';
     }
     if (node.sourceArtifact) metaHtml += renderSourceArtifact(node.sourceArtifact);
     let linkedSymsHtml = '';
@@ -392,7 +392,7 @@
       const beforeDocs = related.filter(item => item.direction === 'outgoing');
       const afterDocs = related.filter(item => item.direction === 'incoming');
       if (linked.length) {
-          linkedSymsHtml = '<div class="panel-section-title">Linked Symbols (' + linked.length + ')</div>' +
+          linkedSymsHtml = '<div class="panel-section-title">Symbol liên kết (' + linked.length + ')</div>' +
           '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px">' +
           linked.map(s => {
             const symName = String(s.label || s.name || '').replace(/'/g, "\\'");
@@ -401,10 +401,10 @@
               '<span style="min-width:0;overflow:hidden">' + badge(s.type || 'Symbol') + ' <span style="font-family:monospace;font-size:12px">' + esc(s.label || s.name || s.id) + '</span>' +
               '<span style="font-size:10px;color:var(--text2);margin-left:6px">' + esc(shortPath(s.file || '')) + '</span></span>' +
               '<div style="display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end;flex-shrink:0">' +
-                '<button class="btn-secondary" style="padding:2px 8px;font-size:10px" data-sym-id="' + esc(s.id) + '" data-sym-name="' + esc(s.label || s.name || '') + '" onclick="openSymPopup(this.dataset.symId,this.dataset.symName)">View</button>' +
-                '<button class="btn-secondary" style="padding:2px 8px;font-size:10px" onclick=\'copySymbolAnnotation("' + symName + '","at",this)\'>Copy @symbol</button>' +
-                '<button class="btn-secondary" style="padding:2px 8px;font-size:10px" onclick=\'copySymbolAnnotation("' + symName + '","wiki",this)\'>Copy [[Symbol]]</button>' +
-                '<button class="unlink-btn" data-doc-id="' + esc(node.id) + '" data-sym-id="' + esc(s.id) + '" onclick="doUnlink(this.dataset.docId,this.dataset.symId,this)">Unlink</button>' +
+                '<button class="btn-secondary" style="padding:2px 8px;font-size:10px" data-sym-id="' + esc(s.id) + '" data-sym-name="' + esc(s.label || s.name || '') + '" onclick="openSymPopup(this.dataset.symId,this.dataset.symName)">Xem</button>' +
+                '<button class="btn-secondary" style="padding:2px 8px;font-size:10px" onclick=\'copySymbolAnnotation("' + symName + '","at",this)\'>Chép @symbol</button>' +
+                '<button class="btn-secondary" style="padding:2px 8px;font-size:10px" onclick=\'copySymbolAnnotation("' + symName + '","wiki",this)\'>Chép [[Symbol]]</button>' +
+                '<button class="unlink-btn" data-doc-id="' + esc(node.id) + '" data-sym-id="' + esc(s.id) + '" onclick="doUnlink(this.dataset.docId,this.dataset.symId,this)">Gỡ liên kết</button>' +
               '</div>' +
             '</div>'
           ); }).join('') +
@@ -415,9 +415,6 @@
           '<div class="panel-section-title">' + title + ' (' + items.length + ')</div>' +
           '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px">' +
           items.map(item => {
-            const src = String(node.file || '').replace(/'/g, "\\'");
-            const target = String(item.doc.file || '').replace(/'/g, "\\'");
-            const slug = String(item.doc.slug || '').replace(/'/g, "\\'");
             const docId = String(item.doc.id).replace(/'/g, "\\'");
             return (
             '<div class="linked-sym-row" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:5px 8px;border-radius:6px;background:var(--bg);border:1px solid var(--border)">' +
@@ -426,36 +423,46 @@
                 '<span style="font-family:monospace;font-size:12px">' + esc(item.doc.label || item.doc.heading || item.doc.id) + '</span>' +
                 '<span style="font-size:10px;color:var(--text2);margin-left:6px">' + esc(shortPath(item.doc.file || '')) + '</span></span>' +
               '<div style="display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end;flex-shrink:0">' +
-                '<button class="btn-secondary" style="padding:2px 8px;font-size:10px" onclick="selectVdocsNode(' + "'" + docId + "'" + ',true)">Open</button>' +
-                '<button class="btn-secondary" style="padding:2px 8px;font-size:10px" onclick="openVdocsLinks(' + "'" + docId + "'" + ')">Links</button>' +
-                '<button class="btn-secondary" style="padding:2px 8px;font-size:10px" onclick="gotoDocFlow(' + "'" + 'doc:' + docId + "'" + ')">Trace Flow</button>' +
-                '<button class="btn-secondary" style="padding:2px 8px;font-size:10px" onclick=\'copyVdocsLayerAnnotation("' + src + '","' + target + '","' + slug + '","at",this)\'>Copy @doc</button>' +
-                '<button class="btn-secondary" style="padding:2px 8px;font-size:10px" onclick=\'copyVdocsLayerAnnotation("' + src + '","' + target + '","' + slug + '","wiki",this)\'>Copy [[doc]]</button>' +
+                '<button class="btn-secondary" style="padding:2px 8px;font-size:10px" onclick="selectVdocsNode(' + "'" + docId + "'" + ',true)">Mở</button>' +
               '</div>' +
             '</div>'
           ); }).join('') +
           '</div>';
-        relatedDocsHtml = '<div class="panel-section-title">Doc Layers (' + related.length + ')</div>' +
+        relatedDocsHtml = '<div class="panel-section-title">Tầng tài liệu (' + related.length + ')</div>' +
+          '<div style="color:var(--text2);font-size:11px;margin-bottom:10px">Danh sách này để định vị nhanh section liên quan. Khi cần xem Liên kết hoặc Truy dấu luồng, mở section đó rồi dùng action ở panel chính.</div>' +
           (beforeDocs.length
-            ? renderRelatedGroup('Before', beforeDocs, { bg: '#ec489922', fg: '#ec4899' })
-            : '<div style="color:var(--text2);font-size:11px;margin-bottom:10px">No upstream docs.</div>') +
+            ? renderRelatedGroup('Trước', beforeDocs, { bg: '#ec489922', fg: '#ec4899' })
+            : '<div style="color:var(--text2);font-size:11px;margin-bottom:10px">Không có tài liệu upstream.</div>') +
           (afterDocs.length
-            ? renderRelatedGroup('After', afterDocs, { bg: '#f59e0b22', fg: '#f59e0b' })
-            : '<div style="color:var(--text2);font-size:11px;margin-bottom:10px">No downstream docs.</div>');
+            ? renderRelatedGroup('Sau', afterDocs, { bg: '#f59e0b22', fg: '#f59e0b' })
+            : '<div style="color:var(--text2);font-size:11px;margin-bottom:10px">Không có tài liệu downstream.</div>');
       }
     }
     const primaryFlowDocId = node.type === 'DocSection' ? node.id : (sectionNodes[0]?.id || node.id);
+    const exportViewLabel = typeof window.getVdocsExportViewLabel === 'function'
+      ? window.getVdocsExportViewLabel()
+      : 'Component';
+    const mermaidPreviewHtml = typeof window.getVdocsArchitecturePreviewHtml === 'function'
+      ? window.getVdocsArchitecturePreviewHtml(String(node.id))
+      : '<div class="vdocs-outline-empty">Bấm <strong>Xem Mermaid</strong> để dựng sơ đồ cho section này.</div>';
+    const mermaidActionLabel = typeof window.getVdocsArchitectureActionLabel === 'function'
+      ? window.getVdocsArchitectureActionLabel(String(node.id))
+      : 'Xem Mermaid';
     const actions = (node.type === 'DocSection' || node.type === 'DocFile' || node.type === 'EmbeddedDocRegion')
       ? '<div class="vdocs-preview-actions">' +
-          '<button class="btn-primary" style="padding:6px 10px;font-size:12px" onclick="openVdocsLinks(' + "'" + String(node.id).replace(/'/g, "\\'") + "'" + ')">Open in Links</button>' +
-          '<button class="btn-secondary" style="padding:6px 10px;font-size:12px" onclick="gotoDocFlow(' + "'" + 'doc:' + String(primaryFlowDocId).replace(/'/g, "\\'") + "'" + ')">Trace Flow</button>' +
-        '</div>'
+          '<button class="btn-primary" style="padding:6px 10px;font-size:12px" onclick="openVdocsLinks(' + "'" + String(node.id).replace(/'/g, "\\'") + "'" + ')">Mở ở Liên kết</button>' +
+          '<button class="btn-secondary" style="padding:6px 10px;font-size:12px" onclick="gotoDocFlow(' + "'" + String(primaryFlowDocId).replace(/'/g, "\\'") + "'" + ')">Truy dấu luồng</button>' +
+          '<button class="btn-secondary" style="padding:6px 10px;font-size:12px" onclick="previewArchitecture(' + "'" + String(node.id).replace(/'/g, "\\'") + "'" + ',this)">' + esc(mermaidActionLabel) + '</button>' +
+        '</div>' +
+        '<div style="margin-top:8px;font-size:11px;color:var(--text2)">Mức sơ đồ hiện tại: <strong style="color:var(--text)">' + esc(exportViewLabel) + '</strong>.</div>' +
+        '<div class="panel-section-title">Sơ đồ Mermaid</div>' +
+        '<div id="vdocs-arch-preview" class="vdocs-content">' + mermaidPreviewHtml + '</div>'
       : '';
     return '<div class="vdocs-preview-head">' +
         '<div><h3 class="vdocs-preview-title">' + esc(node.fullLabel || node.label) + '</h3>' +
         '<div class="vdocs-preview-breadcrumb">' + esc((node.path || []).join(' / ')) + '</div></div>' +
       '</div>' +
-      '<div class="vdocs-preview-card">' + metaHtml + actions + relatedDocsHtml + linkedSymsHtml + '<div class="panel-section-title">Content</div><div class="vdocs-content">' + mdHtml + '</div></div>';
+      '<div class="vdocs-preview-card">' + metaHtml + actions + relatedDocsHtml + linkedSymsHtml + '<div class="panel-section-title">Nội dung</div><div class="vdocs-content">' + mdHtml + '</div></div>';
   }
 
   /**
@@ -871,3 +878,9 @@
 
     return { nodeMeta, regionNodes, edges };
   }
+
+  window.renderOutline = renderOutline;
+  window.scrollToDocSource = scrollToDocSource;
+  window.selectVdocsNode = selectVdocsNode;
+  window.openVdocsLinks = openVdocsLinks;
+  window.toggleVdocsFold = toggleVdocsFold;

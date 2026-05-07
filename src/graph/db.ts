@@ -2,7 +2,7 @@ import Database from 'better-sqlite3';
 import { createRequire } from 'module';
 import { mkdir } from 'fs/promises';
 import { dirname } from 'path';
-import type { GraphNode, GraphEdge, DocSection, ParseArtifact, ParseRule, RuleSet, ResolvedRuleSet, RuleLink } from '../types/index.js';
+import type { GraphNode, GraphEdge, DocSection, ParseArtifact, ParseRule, RuleSet, ResolvedRuleSet, RuleLink, HealthDashboardSnapshot, PendingCall } from '../types/index.js';
 
 const require = createRequire(import.meta.url);
 
@@ -12,9 +12,13 @@ const require = createRequire(import.meta.url);
  *
  * @doc:../../docs/architecture/06-6-graphdb-schema-ay-u.md#6-graphdb-schema-ay-u
  * @doc:../../docs/architecture/02-2-pipeline-tong-the.md#2-pipeline-tong-the
+ * @doc:../../docs/requirements/prd-living-architecture-and-freshness.md#prd-ops-002-knowledge-health-dashboard
+ * @doc:../../docs/requirements/frd-architecture-surfaces-and-freshness.md#frd-fresh-003-freshness-metrics-va-stale-state-reporting
  *
  * BRD-REQ-001: index code and docs into one local graph.
  * FRD-TRACE-003: preserve stable linking metadata across re-index cycles.
+ * PRD-OPS-002: knowledge health dashboard data source.
+ * FRD-FRESH-003: freshness metrics and stale-state reporting data source.
  */
 export class GraphDB {
   private dbPath: string;
@@ -129,6 +133,15 @@ export class GraphDB {
         indexed_at REAL NOT NULL,
         PRIMARY KEY (project_id, file_path)
       );
+
+      CREATE TABLE IF NOT EXISTS pending_calls_cache (
+        project_id TEXT NOT NULL,
+        file_path TEXT NOT NULL,
+        caller_id TEXT NOT NULL,
+        callee_name TEXT NOT NULL,
+        PRIMARY KEY (project_id, file_path, caller_id, callee_name)
+      );
+      CREATE INDEX IF NOT EXISTS idx_pending_calls_proj_name ON pending_calls_cache(project_id, callee_name);
 
       CREATE TABLE IF NOT EXISTS parse_rules (
         project_id TEXT NOT NULL,
@@ -276,6 +289,21 @@ export class GraphDB {
           indexed_at REAL NOT NULL,
           PRIMARY KEY (project_id, file_path)
         )
+      `);
+    }
+    const hasPendingCallsCache = (this.db.prepare(
+      `SELECT count(*) as n FROM sqlite_master WHERE type='table' AND name='pending_calls_cache'`
+    ).get() as { n: number }).n > 0;
+    if (!hasPendingCallsCache) {
+      this.db.exec(`
+        CREATE TABLE pending_calls_cache (
+          project_id TEXT NOT NULL,
+          file_path TEXT NOT NULL,
+          caller_id TEXT NOT NULL,
+          callee_name TEXT NOT NULL,
+          PRIMARY KEY (project_id, file_path, caller_id, callee_name)
+        );
+        CREATE INDEX idx_pending_calls_proj_name ON pending_calls_cache(project_id, callee_name);
       `);
     }
     // Column additions for older schemas
@@ -487,6 +515,7 @@ export class GraphDB {
       this.db.prepare(`DELETE FROM edges WHERE project_id = ? AND (source_id = ? OR target_id = ?) AND is_manual = 0`).run(this.projectId, id, id);
     }
     this.db.prepare(`DELETE FROM doc_sections WHERE project_id = ? AND file_path = ?`).run(this.projectId, filePath);
+    this.deletePendingCallsByFilePath(filePath);
   }
 
   /**
@@ -799,6 +828,38 @@ export class GraphDB {
   }
 
   /**
+   * Returns all persisted symbols for the active project without a caller-supplied query filter.
+   */
+  getAllSymbols(): GraphNode[] {
+    return (this.db.prepare(`SELECT * FROM symbols WHERE project_id = ?`).all(this.projectId) as Record<string, unknown>[]).map(rowToNode);
+  }
+
+  /**
+   * Returns all persisted doc sections for the active project in file/line order.
+   */
+  getAllDocSections(): DocSection[] {
+    return (this.db.prepare(`
+      SELECT * FROM doc_sections
+      WHERE project_id = ?
+      ORDER BY file_path, start_line
+    `).all(this.projectId) as Record<string, unknown>[]).map(rowToDoc);
+  }
+
+  /**
+   * Removes non-manual edges for the provided edge types across the active project.
+   */
+  deleteAutomatedEdgesByTypes(types: GraphEdge['type'][]): void {
+    if (!types.length) return;
+    const placeholders = types.map(() => '?').join(', ');
+    this.db.prepare(`
+      DELETE FROM edges
+      WHERE project_id = ?
+        AND is_manual = 0
+        AND type IN (${placeholders})
+    `).run(this.projectId, ...types);
+  }
+
+  /**
    * Executes a synchronous grouping of SQLite queries wrapped strictly inside a single commit block.
    */
   transaction<T>(fn: () => T): T {
@@ -827,6 +888,60 @@ export class GraphDB {
           indexed_at   = excluded.indexed_at
       `)
       .run(this.projectId, filePath, contentHash, Date.now());
+  }
+
+  /**
+   * Replaces unresolved cross-file call cache for one parsed source file.
+   */
+  replacePendingCalls(filePath: string, pendingCalls: PendingCall[]): void {
+    this.deletePendingCallsByFilePath(filePath);
+    if (!pendingCalls.length) return;
+    const stmt = this.db.prepare(`
+      INSERT OR IGNORE INTO pending_calls_cache (project_id, file_path, caller_id, callee_name)
+      VALUES (?, ?, ?, ?)
+    `);
+    for (const call of pendingCalls) {
+      stmt.run(this.projectId, filePath, call.callerId, call.calleeName);
+    }
+  }
+
+  /**
+   * Returns cached unresolved cross-file calls across the whole project.
+   */
+  getAllPendingCalls(): PendingCall[] {
+    return (this.db.prepare(`
+      SELECT caller_id, callee_name
+      FROM pending_calls_cache
+      WHERE project_id = ?
+    `).all(this.projectId) as Array<{ caller_id: string; callee_name: string }>).map((row) => ({
+      callerId: row.caller_id,
+      calleeName: row.callee_name,
+    }));
+  }
+
+  /**
+   * Clears cached unresolved cross-file calls for one file.
+   */
+  deletePendingCallsByFilePath(filePath: string): void {
+    this.db.prepare(`
+      DELETE FROM pending_calls_cache
+      WHERE project_id = ? AND file_path = ?
+    `).run(this.projectId, filePath);
+  }
+
+  /**
+   * Lists all cached file paths for the active project to support stale-file pruning.
+   */
+  getCachedFilePaths(): string[] {
+    return (this.db.prepare(`SELECT file_path FROM file_cache WHERE project_id = ?`).all(this.projectId) as Array<{ file_path: string }>)
+      .map((row) => row.file_path);
+  }
+
+  /**
+   * Removes one file from the delta cache after the underlying file disappears.
+   */
+  deleteFileCache(filePath: string): void {
+    this.db.prepare(`DELETE FROM file_cache WHERE project_id = ? AND file_path = ?`).run(this.projectId, filePath);
   }
 
   /**
@@ -1678,6 +1793,113 @@ export class GraphDB {
     const codeSourceCount = (this.getProjectConfig<Array<{ path: string }>>('codeSources') ?? []).length;
     const docSourceCount = (this.getProjectConfig<Array<{ path: string }>>('docSources') ?? []).length;
     return { symbolCount, edgeCount, docSectionCount, parseRuleCount, parseArtifactCount, codeSourceCount, docSourceCount };
+  }
+
+  /**
+   * Builds a stakeholder-facing health snapshot from current graph, docs, and freshness state.
+   */
+  getHealthDashboard(): HealthDashboardSnapshot {
+    const symbolCount = (this.db.prepare(`SELECT COUNT(*) as n FROM symbols WHERE project_id = ?`).get(this.projectId) as { n: number }).n;
+    const edgeCount = (this.db.prepare(`SELECT COUNT(*) as n FROM edges WHERE project_id = ?`).get(this.projectId) as { n: number }).n;
+    const docSectionCount = (this.db.prepare(`SELECT COUNT(*) as n FROM doc_sections WHERE project_id = ?`).get(this.projectId) as { n: number }).n;
+    const requirementCount = (this.db.prepare(`SELECT COUNT(*) as n FROM symbols WHERE project_id = ? AND type = 'Requirement'`).get(this.projectId) as { n: number }).n;
+    const documentableSymbolCount = (this.db.prepare(`
+      SELECT COUNT(*) as n FROM symbols
+      WHERE project_id = ? AND type IN ('Function', 'Class', 'Method')
+    `).get(this.projectId) as { n: number }).n;
+    const undocumentedSymbolCount = (this.db.prepare(`
+      SELECT COUNT(*) as n
+      FROM symbols s
+      WHERE s.project_id = ?
+        AND s.type IN ('Function', 'Class', 'Method')
+        AND COALESCE(s.doc_string, '') = ''
+        AND NOT EXISTS (
+          SELECT 1 FROM edges e
+          WHERE e.project_id = s.project_id
+            AND e.target_id = s.id
+            AND e.type IN ('DOCUMENTED_BY', 'REFERENCES', 'EXPLAINS_FLOW')
+        )
+    `).get(this.projectId) as { n: number }).n;
+    const totalLinks = this.getDocLinkCount();
+    const staleLinkCount = this.getStaleDocLinks().length;
+    const unresolvedMarks = this.getDocLinkMarks(true);
+    const unresolvedMarkCount = unresolvedMarks.length;
+    const orphanedMarkCount = unresolvedMarks.filter((mark) => {
+      if (!this.getDocSectionById(mark.docSectionId)) return true;
+      if (mark.markType === 'doc_doc') {
+        return !mark.targetDocSectionId || !this.getDocSectionById(mark.targetDocSectionId);
+      }
+      return !mark.symbolId || !this.getSymbolById(mark.symbolId);
+    }).length;
+    const tracedRequirementCount = (this.db.prepare(`
+      SELECT COUNT(DISTINCT s.id) as n
+      FROM symbols s
+      WHERE s.project_id = ? AND s.type = 'Requirement'
+        AND EXISTS (
+          SELECT 1 FROM edges e
+          WHERE e.project_id = s.project_id
+            AND e.target_id = s.id
+            AND e.type = 'SATISFIES'
+        )
+    `).get(this.projectId) as { n: number }).n;
+    const lastIndexedAtRow = this.db.prepare(`
+      SELECT MAX(indexed_at) as indexedAt FROM file_cache WHERE project_id = ?
+    `).get(this.projectId) as { indexedAt: number | null };
+    const lastIndexMeta = this.getProjectConfig<{
+      indexedAt?: number;
+      mode?: 'full' | 'delta';
+      codeFiles?: number;
+      docFiles?: number;
+      skipped?: number;
+      errors?: number;
+      elapsedMs?: number;
+      prunedFileCount?: number;
+    }>('lastIndexMeta');
+    const lastIndexedAt = lastIndexMeta?.indexedAt ?? lastIndexedAtRow.indexedAt ?? null;
+    const freshnessAgeMs = lastIndexedAt ? Math.max(0, Date.now() - lastIndexedAt) : null;
+
+    const coveragePct = documentableSymbolCount > 0
+      ? Math.round(((documentableSymbolCount - undocumentedSymbolCount) / documentableSymbolCount) * 1000) / 10
+      : 100;
+    const traceCompletenessPct = requirementCount > 0
+      ? Math.round((tracedRequirementCount / requirementCount) * 1000) / 10
+      : 100;
+    const provenanceConfidencePct = totalLinks > 0
+      ? Math.round(((totalLinks - staleLinkCount) / totalLinks) * 1000) / 10
+      : 100;
+
+    const coverageGap = documentableSymbolCount > 0 ? undocumentedSymbolCount / documentableSymbolCount : 0;
+    const staleLinkRate = totalLinks > 0 ? staleLinkCount / totalLinks : 0;
+    const markRate = Math.min(unresolvedMarkCount / 20, 1);
+    const freshnessPenalty = freshnessAgeMs == null ? 1 : Math.min(freshnessAgeMs / (1000 * 60 * 60 * 24 * 7), 1);
+    const driftScore = Math.round((coverageGap * 0.4 + staleLinkRate * 0.25 + markRate * 0.15 + freshnessPenalty * 0.2) * 1000) / 10;
+
+    return {
+      symbolCount,
+      edgeCount,
+      docSectionCount,
+      requirementCount,
+      documentableSymbolCount,
+      undocumentedSymbolCount,
+      coveragePct,
+      totalLinks,
+      staleLinkCount,
+      unresolvedMarkCount,
+      orphanedMarkCount,
+      tracedRequirementCount,
+      traceCompletenessPct,
+      lastIndexedAt,
+      freshnessAgeMs,
+      lastIndexMode: lastIndexMeta?.mode ?? null,
+      lastIndexCodeFiles: lastIndexMeta?.codeFiles ?? 0,
+      lastIndexDocFiles: lastIndexMeta?.docFiles ?? 0,
+      lastIndexSkipped: lastIndexMeta?.skipped ?? 0,
+      lastIndexErrors: lastIndexMeta?.errors ?? 0,
+      lastIndexElapsedMs: lastIndexMeta?.elapsedMs ?? 0,
+      prunedFileCount: lastIndexMeta?.prunedFileCount ?? 0,
+      provenanceConfidencePct,
+      driftScore,
+    };
   }
 
   /**

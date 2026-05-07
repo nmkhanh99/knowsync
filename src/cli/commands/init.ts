@@ -34,7 +34,7 @@ export async function runInit(projectDir: string): Promise<void> {
   const hookDir = join(projectDir, '.git', 'hooks');
   if (existsSync(join(projectDir, '.git'))) {
     await mkdir(hookDir, { recursive: true });
-    const hookContent = `#!/bin/sh\nnpx knowsync index --delta\n`;
+    const hookContent = `#!/bin/sh\nnpx knowsync index . --docs --delta >/dev/null 2>&1 || true\n`;
     const hookPath = join(hookDir, 'post-commit');
     await writeFile(hookPath, hookContent, { mode: 0o755 });
     console.log('Installed git post-commit hook');

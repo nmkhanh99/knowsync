@@ -15,10 +15,12 @@ export interface IndexSummary {
   docFiles: number;
   skipped: number;
   errors: number;
+  prunedFiles: number;
   nodes: number;
   edges: number;
   clusters: number;
   elapsedMs: number;
+  mode: 'full' | 'delta';
 }
 
 /**
@@ -29,9 +31,13 @@ export interface IndexSummary {
  * @doc:../../docs/architecture/01-1-tong-quan.md#1-tong-quan
  * @doc:../../docs/architecture/02-2-pipeline-tong-the.md#2-pipeline-tong-the
  * @doc:../../docs/guide/03-3-index-xay-dung-knowledge-graph.md#3-index-xay-dung-knowledge-graph
+ * @doc:../../docs/requirements/prd-living-architecture-and-freshness.md#prd-core-004-continuous-freshness-va-delta-automation
+ * @doc:../../docs/requirements/frd-architecture-surfaces-and-freshness.md#frd-fresh-001-delta-indexing
  *
  * BRD-REQ-001: index code and docs into one graph.
  * PRD-UI-002: keep embedded Markdown regions available for Visual Docs.
+ * PRD-CORE-004: continuous freshness and delta indexing.
+ * FRD-FRESH-001: delta indexing.
  */
 export async function runIndex(db: GraphDB, options: IndexOptions): Promise<IndexSummary> {
   const { includeDocs, delta, languages, docSources, codeSources } = options;
@@ -43,11 +49,16 @@ export async function runIndex(db: GraphDB, options: IndexOptions): Promise<Inde
   console.log(`  Scanning configured sources${delta ? ' (delta)' : ''} …`);
   const { codeFiles, docFiles } = await crawlRepo(languages, docSources, codeSources?.length ? codeSources : undefined);
   console.log(`  Found ${codeFiles.length} code + ${docFiles.length} doc files`);
+  const prunedFiles = pruneMissingFiles(db, {
+    codeFiles: codeFiles.map((file) => file.filePath),
+    docFiles: docFiles.map((file) => file.filePath),
+    codeSources,
+    docSources,
+  });
 
   let errors = 0;
   let totalNodes = 0;
   let totalEdges = 0;
-  const allPendingCalls: PendingCall[] = [];
 
   // ─── Parse code files ───────────────────────────────────────────────────────
 
@@ -80,9 +91,9 @@ export async function runIndex(db: GraphDB, options: IndexOptions): Promise<Inde
           wireSymbolLinksFromDocs(db, embeddedDocs);
           wireRequirementLinksFromDocs(db, embeddedDocs);
           wireRequirementLinksFromCode(db, filteredResult.nodes);
+          db.replacePendingCalls(file.filePath, filteredResult.pendingCalls);
           db.updateFileCache(file.filePath, file.contentHash);
         });
-        allPendingCalls.push(...filteredResult.pendingCalls);
         totalNodes += filteredResult.nodes.length;
         totalEdges += filteredResult.edges.length;
       } catch (err) {
@@ -97,9 +108,9 @@ export async function runIndex(db: GraphDB, options: IndexOptions): Promise<Inde
 
   // ─── Parse doc files ────────────────────────────────────────────────────────
 
+  let docSkipped = 0;
   if (includeDocs) {
     let docParsed = 0;
-    let docSkipped = 0;
     process.stdout.write('  Parsing docs ');
 
     for (const file of docFiles) {
@@ -127,14 +138,15 @@ export async function runIndex(db: GraphDB, options: IndexOptions): Promise<Inde
     process.stdout.write(` ${docFiles.length - docSkipped} parsed, ${docSkipped} skipped\n`);
   }
 
-  wireDocLinksFromAllDocs(db);
+  db.deleteAutomatedEdgesByTypes(['DOCUMENTED_BY', 'REFERENCES', 'EXPLAINS_FLOW', 'SATISFIES', 'REFERENCES_DOC']);
+  rewireDerivedTraceEdges(db);
 
   // ─── Cross-file call resolution (second pass) ───────────────────────────────
   // Pending calls are callee names that couldn't be resolved within a single
   // file.  Now that all files are in the DB, look each callee up and create edges.
 
   process.stdout.write('  Resolving cross-file calls … ');
-  const crossFileEdges = resolvePendingCalls(db, allPendingCalls);
+  const crossFileEdges = resolvePendingCalls(db, db.getAllPendingCalls());
   totalEdges += crossFileEdges;
   process.stdout.write(`${crossFileEdges} new edges\n`);
 
@@ -153,16 +165,79 @@ export async function runIndex(db: GraphDB, options: IndexOptions): Promise<Inde
   const summary: IndexSummary = {
     codeFiles: codeFiles.length,
     docFiles: includeDocs ? docFiles.length : 0,
-    skipped: codeSkipped,
+    skipped: codeSkipped + docSkipped,
     errors,
+    prunedFiles,
     nodes: totalNodes,
     edges: totalEdges,
     clusters: clusters.length,
     elapsedMs: Date.now() - t0,
+    mode: delta ? 'delta' : 'full',
   };
+
+  db.setProjectConfig('lastIndexMeta', {
+    indexedAt: Date.now(),
+    mode: summary.mode,
+    codeFiles: summary.codeFiles,
+    docFiles: summary.docFiles,
+    skipped: summary.skipped,
+    errors: summary.errors,
+    prunedFileCount: summary.prunedFiles,
+    nodes: summary.nodes,
+    edges: summary.edges,
+    clusters: summary.clusters,
+    elapsedMs: summary.elapsedMs,
+  });
 
   printSummary(summary);
   return summary;
+}
+
+function normalizeSourcePrefix(rawPath: string): string {
+  const trimmed = rawPath.trim();
+  if (!trimmed) return '';
+  if (trimmed.includes('*')) {
+    const beforeWild = trimmed.split('*')[0];
+    const baseDir = beforeWild.includes('/')
+      ? beforeWild.slice(0, beforeWild.lastIndexOf('/'))
+      : '.';
+    return resolve(baseDir);
+  }
+  return resolve(trimmed);
+}
+
+function fileIsWithinSource(filePath: string, sources: Array<{ path: string }>): boolean {
+  return sources.some((source) => {
+    const prefix = normalizeSourcePrefix(source.path);
+    if (!prefix) return false;
+    return filePath === prefix || filePath.startsWith(prefix + '/');
+  });
+}
+
+function pruneMissingFiles(
+  db: GraphDB,
+  input: {
+    codeFiles: string[];
+    docFiles: string[];
+    codeSources?: IndexOptions['codeSources'];
+    docSources?: IndexOptions['docSources'];
+  },
+): number {
+  const expected = new Set([...input.codeFiles, ...input.docFiles]);
+  const cached = db.getCachedFilePaths();
+  let pruned = 0;
+
+  for (const filePath of cached) {
+    const inCodeScope = input.codeSources?.length ? fileIsWithinSource(filePath, input.codeSources) : false;
+    const inDocScope = input.docSources?.length ? fileIsWithinSource(filePath, input.docSources) : false;
+    if (!inCodeScope && !inDocScope) continue;
+    if (expected.has(filePath)) continue;
+    db.deleteByFilePath(filePath);
+    db.deleteFileCache(filePath);
+    pruned++;
+  }
+
+  return pruned;
 }
 
 /**
@@ -267,7 +342,7 @@ function wireRequirementLinksFromDocs(
  * @doc:../../docs/guide/19-9-huong-dan-ra-lenh-cho-ai-agent-qua-mcp.md#chuan-annotation-khi-ai-viet-docscode
  */
 function wireDocLinksFromAllDocs(db: GraphDB): void {
-  const sections = db.searchDocs('', 5000);
+  const sections = db.getAllDocSections();
   const docsByFile = new Map<string, DocSection[]>();
 
   for (const section of sections) {
@@ -288,6 +363,18 @@ function wireDocLinksFromAllDocs(db: GraphDB): void {
       });
     }
   }
+}
+
+/**
+ * Rebuilds doc/code/requirement trace edges from persisted graph state so
+ * delta runs stay consistent even when only one side of a relationship changed.
+ */
+function rewireDerivedTraceEdges(db: GraphDB): void {
+  const sections = db.getAllDocSections();
+  wireSymbolLinksFromDocs(db, sections);
+  wireRequirementLinksFromDocs(db, sections);
+  wireDocLinksFromAllDocs(db);
+  wireRequirementLinksFromCode(db, db.getAllSymbols());
 }
 
 /**
@@ -449,6 +536,7 @@ function printSummary(s: IndexSummary): void {
     `\n  ┌─ Index complete ─────────────────`,
     `  │  Code files : ${s.codeFiles} (${s.skipped} skipped, ${s.errors} errors)`,
     `  │  Doc files  : ${s.docFiles}`,
+    `  │  Pruned     : ${s.prunedFiles}`,
     `  │  Nodes      : ${s.nodes}`,
     `  │  Edges      : ${s.edges}`,
     `  │  Clusters   : ${s.clusters}`,

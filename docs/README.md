@@ -12,7 +12,9 @@ Chuẩn trace annotation dùng xuyên suốt tài liệu:
 - code -> doc: `@doc:path#slug` trong comment/docstring
 
 - [Architecture](./architecture/README.md)
+- [Implementation Plan — Living Architecture System 2.0](./architecture/19-19-implementation-plan-living-architecture-system-2-0.md)
 - [Development](./development/README.md)
 - [Guide](./guide/README.md)
+- [Requirements](./requirements/README.md)
 - [Code ↔ Docs Map](./architecture/16-16-code-doc-link-map.md)
 - [UI Public Parse Audit](./architecture/17-17-index-html-parse-audit.md)

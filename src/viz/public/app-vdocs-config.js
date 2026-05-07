@@ -91,8 +91,8 @@
    */
   function vdocsCfgSetAddMode() {
     _vdocsCfgEditIdx = -1;
-    document.getElementById('vdocs-cfg-ds-form-title').textContent = 'ADD DOC SOURCE';
-    document.getElementById('vdocs-cfg-ds-submit').textContent = '+ Add';
+    document.getElementById('vdocs-cfg-ds-form-title').textContent = 'THÊM NGUỒN TÀI LIỆU';
+    document.getElementById('vdocs-cfg-ds-submit').textContent = '+ Thêm';
     document.getElementById('vdocs-cfg-ds-cancel').style.display = 'none';
     vdocsCfgClearForm();
     renderVdocsCfgSources();
@@ -128,8 +128,8 @@
     document.getElementById('vdocs-cfg-ds-color-picker').value = s.color || '#58a6ff';
     document.getElementById('vdocs-cfg-ds-order').value = s.order != null ? String(s.order) : '';
     document.getElementById('vdocs-cfg-ds-exclude').value = s.excludeFiles ? s.excludeFiles.join(', ') : '';
-    document.getElementById('vdocs-cfg-ds-form-title').textContent = 'EDIT DOC SOURCE';
-    document.getElementById('vdocs-cfg-ds-submit').textContent = '✓ Update';
+    document.getElementById('vdocs-cfg-ds-form-title').textContent = 'SỬA NGUỒN TÀI LIỆU';
+    document.getElementById('vdocs-cfg-ds-submit').textContent = '✓ Cập nhật';
     document.getElementById('vdocs-cfg-ds-cancel').style.display = '';
     document.getElementById('vdocs-cfg-ds-form').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     renderVdocsCfgSources();
@@ -159,28 +159,28 @@
     const btn = document.getElementById('btn-vdocs-scan');
     const scanEl = document.getElementById('vdocs-cfg-scan-results');
     btn.disabled = true;
-    btn.textContent = 'Scanning…';
+    btn.textContent = 'Đang quét…';
     scanEl.style.display = 'block';
-    scanEl.innerHTML = loading('Scanning project…');
+    scanEl.innerHTML = loading('Đang quét dự án…');
     try {
       const r = await fetch('/api/doc-sources/scan?project=' + enc(currentProject));
       const data = await r.json();
-      if (!r.ok) { scanEl.innerHTML = errHTML(data.error || 'Scan failed'); return; }
+      if (!r.ok) { scanEl.innerHTML = errHTML(data.error || 'Quét thất bại'); return; }
       const discovered = data.discovered || [];
-      if (!discovered.length) { scanEl.innerHTML = '<div style="font-size:11px;color:var(--text2)">No Markdown directories found.</div>'; return; }
+      if (!discovered.length) { scanEl.innerHTML = '<div style="font-size:11px;color:var(--text2)">Không tìm thấy thư mục Markdown.</div>'; return; }
       const existing = new Set(_vdocsCfgSources.map(s => s.path));
-      scanEl.innerHTML = '<div style="font-size:10px;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em">Discovered directories — click to add</div>' +
+      scanEl.innerHTML = '<div style="font-size:10px;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em">Thư mục tìm thấy — bấm để thêm</div>' +
         discovered.map(d => {
           const alreadyAdded = existing.has(d.path);
           return '<div class="vdocs-scan-item' + (alreadyAdded ? '" style="opacity:.5;cursor:default' : '" onclick="vdocsCfgAddFromScan(' + "'" + d.path.replace(/'/g, "\\'") + "'" + ')"') + '">' +
             '<span class="scan-path">' + esc(d.path) + '</span>' +
             '<span class="scan-cnt">' + d.mdFileCount + ' .md</span>' +
             '<span class="scan-files">' + esc(d.sampleFiles.slice(0,3).join(', ')) + (d.sampleFiles.length > 3 ? '…' : '') + '</span>' +
-            (alreadyAdded ? '<span style="font-size:10px;color:var(--green)">✓ added</span>' : '<span style="font-size:10px;color:var(--accent)">+ Add</span>') +
+            (alreadyAdded ? '<span style="font-size:10px;color:var(--green)">✓ đã thêm</span>' : '<span style="font-size:10px;color:var(--accent)">+ Thêm</span>') +
           '</div>';
         }).join('');
     } catch (e) { scanEl.innerHTML = errHTML(String(e)); }
-    finally { btn.disabled = false; btn.textContent = 'Scan project'; }
+    finally { btn.disabled = false; btn.textContent = 'Quét dự án'; }
   }
 
   /**
@@ -199,7 +199,7 @@
         el.style.cursor = 'default';
         el.onclick = null;
         const addLabel = el.querySelector('span:last-child');
-        if (addLabel) { addLabel.textContent = '✓ added'; addLabel.style.color = 'var(--green)'; }
+        if (addLabel) { addLabel.textContent = '✓ đã thêm'; addLabel.style.color = 'var(--green)'; }
       }
     });
   }
@@ -211,7 +211,7 @@
     const msg = document.getElementById('vdocs-cfg-msg');
     const structureMode = document.getElementById('vdocs-cfg-structure').value;
     const folderDepth = Number(document.getElementById('vdocs-cfg-depth').value || 2);
-    msg.innerHTML = loading('Saving…');
+    msg.innerHTML = loading('Đang lưu…');
     try {
       const r = await fetch('/api/visual-docs-config?project=' + enc(currentProject), {
         method: 'PATCH',
@@ -222,8 +222,8 @@
         }),
       });
       const data = await r.json();
-      if (!r.ok) { msg.innerHTML = errHTML(data.error || 'Save failed'); return; }
-      msg.innerHTML = '<span style="color:var(--green);font-size:11px">✓ Saved</span>';
+      if (!r.ok) { msg.innerHTML = errHTML(data.error || 'Lưu thất bại'); return; }
+      msg.innerHTML = '<span style="color:var(--green);font-size:11px">✓ Đã lưu</span>';
       resetVdocsState({ clearUi: false });
       await loadDocGraph();
     } catch (e) { msg.innerHTML = errHTML(String(e)); }
